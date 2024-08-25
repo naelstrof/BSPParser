@@ -23,7 +23,7 @@ public class BSP {
     public const int MIPLEVELS = 4;
     private List<BSPEntity> entities;
     private List<BSPMipTexture> textures;
-    private string filename;
+    private string filepath;
     private DirectoryInfo addonDirectory;
     
     private static bool TryReadStruct<T>(Stream stream, out T output) {
@@ -86,7 +86,7 @@ public class BSP {
     }
 
     public BSP(string filePath) {
-        this.filename = Path.GetFileName(filePath);
+        this.filepath = filePath;
         FileStream stream = new FileStream(filePath, FileMode.Open);
         addonDirectory = new FileInfo(filePath).Directory?.Parent ?? throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
         TryReadStruct(stream, 0, out BSPHeader header);
@@ -98,17 +98,16 @@ public class BSP {
 
     public DirectoryInfo GetAddonDirectory() => addonDirectory;
 
-
     public BSPResources GetResources() {
-        var resources = new BSPResources();
-        resources.AddSound(this, "ambient_generic", "message");
-        resources.AddSound(this, "ambient_music", "message");
-        resources.AddModel(this, "weapon_custom_ammo", "w_model");
-        resources.AddModel(this, "custom_precache", "model_1");
-        resources.AddSound(this, "weapon_custom_sound", "message");
-        resources.AddSound(this, "weapon_custom_bullet", "sounds");
-        resources.AddSound(this, "weapon_custom_bullet", "windup_snd");
-        resources.AddSound(this, "weapon_custom_bullet", "wind_down_snd");
+        var resources = new BSPResources(this);
+        resources.AddSound( "ambient_generic", "message");
+        resources.AddSound( "ambient_music", "message");
+        resources.AddModel( "weapon_custom_ammo", "w_model");
+        resources.AddModel( "custom_precache", "model_1");
+        resources.AddSound( "weapon_custom_sound", "message");
+        resources.AddSound( "weapon_custom_bullet", "sounds");
+        resources.AddSound( "weapon_custom_bullet", "windup_snd");
+        resources.AddSound( "weapon_custom_bullet", "wind_down_snd");
         foreach (var weapon in entities.Where((ent) => ent["classname"] == "weapon_custom")) {
             if (weapon.ContainsKey("sprite_directory") && weapon.TryGetValue("weapon_name", out var weaponName)) {
                 var spriteTextPath = $"sprites/{weapon["sprite_directory"]}/{weaponName}.txt";
@@ -142,22 +141,82 @@ public class BSP {
             }
         }
 
-        resources.AddSprite(this, "env_sprite", "model");
-        resources.AddModel(this, "item_generic", "model");
-        resources.AddModel(this, "func_breakable", "gibmodel");
-        resources.AddSound(this, "func_door", "noise1");
-        resources.AddSound(this, "func_door", "noise2");
-        resources.AddSprite(this, "trigger_camera", "cursor_sprite");
-        resources.AddModel(this, "squadmaker", "new_model");
-        resources.AddSkybox(this, "trigger_changesky", "skyname");
-        resources.AddSound(this, "func_train", "noise");
-        resources.AddModel(this, "weapon_custom_projectile", "projectile_mdl");
-        resources.AddModel(this, "item_inventory", "model");
+        foreach (var monster in entities.Where((ent) => ent.ContainsKey("soundlist"))) {
+            var providedPath = $"sound/{monster["soundlist"].Trim().TrimStart(['.','/'])}";
+            resources.TryAdd(providedPath, new BSPResource(providedPath, new BSPResourceEntitySource(monster)));
+            foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, providedPath))) {
+                var splits = line.Split(null);
+                var count = 0;
+                foreach (var element in splits) {
+                    if (string.IsNullOrEmpty(element.Trim().Trim('"'))) {
+                        continue;
+                    }
+
+                    if (count++ != 1) continue;
+                    if (element.Trim().Trim('"') == "null.wav") {
+                        continue;
+                    }
+                    resources.TryAdd($"sound/{element.Trim().Trim('"')}", new BSPResource($"sound/{element.Trim().Trim('"')}", new BSPResourceEntitySource(monster)));
+                    break;
+                }
+            }
+            
+        }
+
+        foreach (var monster in entities.Where((ent) => ent.ContainsKey("model"))) {
+            if (monster["model"].StartsWith("*")) {
+                continue;
+            }
+            resources.TryAdd(monster["model"], new BSPResource(monster["model"],new BSPResourceEntitySource(monster)));
+        }
+
+        resources.AddSprite( "env_sprite", "model");
+        resources.AddModel( "item_generic", "model");
+        resources.AddModel( "func_breakable", "gibmodel");
+        resources.AddSound( "func_door", "noise1");
+        resources.AddSound( "func_door", "noise2");
+        resources.AddSprite( "trigger_camera", "cursor_sprite");
+        resources.AddModel( "squadmaker", "new_model");
+        resources.AddSkybox( "trigger_changesky", "skyname");
+        resources.AddSound( "func_train", "noise");
+        resources.AddModel( "weapon_custom_projectile", "projectile_mdl");
+        resources.AddModel( "item_inventory", "model");
+        resources.AddModel( "trigger_createentity", "-model");
 
         resources.Clean();
         return resources;
     }
+
+    public BSPResources GetResourceFile() {
+        return new BSPResources($"{filepath.Substring(0, filepath.Length - 4)}.res", this);
+    }
+    public BSPResources GetMalformedResources() {
+        var original_resources = GetResourceFile();
+        // we assume the BSP has the correct casing.
+        var assetsForgottenToBeIncluded = GetResources().Where((a) => !original_resources.ContainsKey(a.Key));
+        var malformed_resources = new BSPResources(this);
+        foreach (var check in assetsForgottenToBeIncluded) {
+            if (File.Exists(Path.Combine(GetAddonDirectory().FullName, check.Key))) {
+                continue;
+            }
+            var fileName = Path.GetFileName(check.Key);
+            var directory = Path.GetDirectoryName(check.Key);
+            if (directory == null) {
+                continue;
+            }
+            var directoryInfo = new DirectoryInfo(Path.Combine(GetAddonDirectory().FullName, directory));
+            if (!directoryInfo.Exists) {
+                continue;
+            }
+            foreach (var file in directoryInfo.GetFiles()) {
+                if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant()) {
+                    malformed_resources.TryAdd(check.Key, check.Value);
+                }
+            }
+        }
+        return malformed_resources;
+    }
     public override string ToString() {
-        return filename;
+        return Path.GetFileName(filepath);
     }
 }
