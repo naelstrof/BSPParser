@@ -23,6 +23,7 @@ public class BSP {
     public const int MIPLEVELS = 4;
     private List<BSPEntity> entities;
     private List<BSPMipTexture> textures;
+    private string filename;
     
     private static bool TryReadStruct<T>(Stream stream, out T output) {
         byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
@@ -63,7 +64,7 @@ public class BSP {
 
     private void ParseEntities(FileStream stream, BSPHeader header) {
         var entitiesLump = header.lump[LUMP_ENTITIES];
-        entities = new List<BSPEntity>(new BSPEntityTokenizer(ReadString(stream, entitiesLump.nOffset, entitiesLump.nLength)));
+        entities = new List<BSPEntity>(new BSPEntityTokenizer(ReadString(stream, entitiesLump.nOffset, entitiesLump.nLength), this));
     }
     
     //BROKEN
@@ -83,12 +84,16 @@ public class BSP {
         }
     }
 
-    public BSP(string filename) {
-        FileStream stream = new FileStream(filename, FileMode.Open);
+    public BSP(string filePath) {
+        this.filename = Path.GetFileName(filePath);
+        FileStream stream = new FileStream(filePath, FileMode.Open);
         TryReadStruct(stream, 0, out BSPHeader header);
         ParseEntities(stream, header);
     }
 
     public ICollection<BSPEntity> GetEntities() => entities;
     public ICollection<BSPMipTexture> GetTextures() => textures;
+    public override string ToString() {
+        return filename;
+    }
 }

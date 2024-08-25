@@ -4,7 +4,7 @@ using System.Text;
 
 namespace BSPParser;
 
-public class BSPEntityTokenizer(string tokens) : IEnumerable<BSPEntity> {
+public class BSPEntityTokenizer(string tokens, BSP bsp) : IEnumerable<BSPEntity> {
     private int ptr = 0;
     private void Trim() {
         while (ptr < tokens.Length && char.IsWhiteSpace(tokens[ptr])) { ptr++; }
@@ -27,7 +27,7 @@ public class BSPEntityTokenizer(string tokens) : IEnumerable<BSPEntity> {
     }
 
     private bool TryGetNextEntity(out BSPEntity entity) {
-        entity = new BSPEntity();
+        entity = new BSPEntity(bsp);
         Trim();
         if (tokens[ptr++] != '{') {
             return false;
