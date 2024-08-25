@@ -145,6 +145,12 @@ public class BSP {
         }
 
         foreach (var monster in entities.Where((ent) => ent["classname"].StartsWith("monster") || ent["classname"] == "squadmaker")) {
+            if (monster.TryGetValue("model", out string? monsterModel)) {
+                if (monsterModel.StartsWith("*")) {
+                    continue;
+                }
+                resources.TryAdd(monsterModel, new BSPResource(monsterModel, new BSPResourceEntitySource(monster)));
+            }
             if (monster.TryGetValue("soundlist", out var soundlist)) {
                 var providedPath = $"sound/{soundlist.Trim().TrimStart(['.', '/'])}";
                 resources.TryAdd(providedPath, new BSPResource(providedPath, new BSPResourceEntitySource(monster)));
@@ -170,12 +176,6 @@ public class BSP {
                         break;
                     }
                 }
-            }
-            if (monster.TryGetValue("model", out string? monsterModel)) {
-                if (monsterModel.StartsWith("*")) {
-                    continue;
-                }
-                resources.TryAdd(monsterModel, new BSPResource(monsterModel, new BSPResourceEntitySource(monster)));
             }
         }
 
