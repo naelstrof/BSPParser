@@ -31,7 +31,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     public void AddSound(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = $"sound/{ent[key]}";
+            var path = $"sound/{ent[key].TrimStart('+')}";
             TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
         }
     }

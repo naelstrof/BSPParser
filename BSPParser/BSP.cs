@@ -108,10 +108,13 @@ public class BSP {
         resources.AddSound( "weapon_custom_bullet", "sounds");
         resources.AddSound( "weapon_custom_bullet", "windup_snd");
         resources.AddSound( "weapon_custom_bullet", "wind_down_snd");
-        foreach (var weapon in entities.Where((ent) => ent["classname"] == "weapon_custom")) {
+        foreach (var weapon in entities.Where((ent) => ent["classname"].StartsWith("weapon_"))) {
             if (weapon.ContainsKey("sprite_directory") && weapon.TryGetValue("weapon_name", out var weaponName)) {
                 var spriteTextPath = $"sprites/{weapon["sprite_directory"]}/{weaponName}.txt";
                 resources.TryAdd(spriteTextPath, new BSPResource(spriteTextPath, new BSPResourceEntitySource(weapon)));
+                if (!File.Exists(Path.Combine(addonDirectory.FullName, spriteTextPath))) {
+                    continue;
+                }
                 foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, spriteTextPath))) {
                     var splits = line.Split(null);
                     var count = 0;
@@ -141,33 +144,39 @@ public class BSP {
             }
         }
 
-        foreach (var monster in entities.Where((ent) => ent.ContainsKey("soundlist"))) {
-            var providedPath = $"sound/{monster["soundlist"].Trim().TrimStart(['.','/'])}";
-            resources.TryAdd(providedPath, new BSPResource(providedPath, new BSPResourceEntitySource(monster)));
-            foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, providedPath))) {
-                var splits = line.Split(null);
-                var count = 0;
-                foreach (var element in splits) {
-                    if (string.IsNullOrEmpty(element.Trim().Trim('"'))) {
-                        continue;
-                    }
+        foreach (var monster in entities.Where((ent) => ent["classname"].StartsWith("monster") || ent["classname"] == "squadmaker")) {
+            if (monster.TryGetValue("soundlist", out var soundlist)) {
+                var providedPath = $"sound/{soundlist.Trim().TrimStart(['.', '/'])}";
+                resources.TryAdd(providedPath, new BSPResource(providedPath, new BSPResourceEntitySource(monster)));
+                if (!File.Exists(Path.Combine(addonDirectory.FullName, providedPath))) {
+                    continue;
+                }
 
-                    if (count++ != 1) continue;
-                    if (element.Trim().Trim('"') == "null.wav") {
-                        continue;
+                foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, providedPath))) {
+                    var splits = line.Split(null);
+                    var count = 0;
+                    foreach (var element in splits) {
+                        if (string.IsNullOrEmpty(element.Trim().Trim('"'))) {
+                            continue;
+                        }
+
+                        if (count++ != 1) continue;
+                        if (element.Trim().Trim('"') == "null.wav") {
+                            continue;
+                        }
+
+                        resources.TryAdd($"sound/{element.Trim().Trim('"')}",
+                            new BSPResource($"sound/{element.Trim().Trim('"')}", new BSPResourceEntitySource(monster)));
+                        break;
                     }
-                    resources.TryAdd($"sound/{element.Trim().Trim('"')}", new BSPResource($"sound/{element.Trim().Trim('"')}", new BSPResourceEntitySource(monster)));
-                    break;
                 }
             }
-            
-        }
-
-        foreach (var monster in entities.Where((ent) => ent.ContainsKey("model"))) {
-            if (monster["model"].StartsWith("*")) {
-                continue;
+            if (monster.TryGetValue("model", out string? monsterModel)) {
+                if (monsterModel.StartsWith("*")) {
+                    continue;
+                }
+                resources.TryAdd(monsterModel, new BSPResource(monsterModel, new BSPResourceEntitySource(monster)));
             }
-            resources.TryAdd(monster["model"], new BSPResource(monster["model"],new BSPResourceEntitySource(monster)));
         }
 
         resources.AddSprite( "env_sprite", "model");
@@ -182,6 +191,10 @@ public class BSP {
         resources.AddModel( "weapon_custom_projectile", "projectile_mdl");
         resources.AddModel( "item_inventory", "model");
         resources.AddModel( "trigger_createentity", "-model");
+        resources.AddSound( "scripted_sentence", "sentence");
+        resources.AddModel( "weaponbox", "model");
+        resources.AddSound( "env_shake", "message");
+        resources.AddSound( "env_spritetrain", "noise");
 
         resources.Clean();
         return resources;
