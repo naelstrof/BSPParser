@@ -2,8 +2,9 @@ using System.Text;
 
 namespace BSPParser;
 
-public class BSPEntity : Dictionary<string,string>, IResourceSource {
+public class BSPEntity : Dictionary<string,string> {
     private BSP parent;
+    public BSP GetParent() => parent;
     public BSPEntity(BSP parent) : base() {
         this.parent = parent;
     }
@@ -13,9 +14,5 @@ public class BSPEntity : Dictionary<string,string>, IResourceSource {
             builder.Append($"\"{pair.Key}\" \"{pair.Value}\"\n");
         }
         return builder.ToString();
-    }
-
-    public string GetResourceDescription() {
-        return $"[Entity:{this["classname"]}, in: {parent}]";
     }
 }

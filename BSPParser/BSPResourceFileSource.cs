@@ -6,7 +6,11 @@ public class BSPResourceFileSource : IResourceSource {
         this.filepath = filepath;
     }
 
+    public override string ToString() {
+        return GetResourceDescription();
+    }
+
     public string GetResourceDescription() {
-        return $"[File:{filepath}]";
+        return $"[File:{Path.GetFileName(filepath)}]";
     }
 }

@@ -24,6 +24,7 @@ public class BSP {
     private List<BSPEntity> entities;
     private List<BSPMipTexture> textures;
     private string filename;
+    private DirectoryInfo addonDirectory;
     
     private static bool TryReadStruct<T>(Stream stream, out T output) {
         byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
@@ -87,12 +88,75 @@ public class BSP {
     public BSP(string filePath) {
         this.filename = Path.GetFileName(filePath);
         FileStream stream = new FileStream(filePath, FileMode.Open);
+        addonDirectory = new FileInfo(filePath).Directory?.Parent ?? throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
         TryReadStruct(stream, 0, out BSPHeader header);
         ParseEntities(stream, header);
     }
 
     public ICollection<BSPEntity> GetEntities() => entities;
     public ICollection<BSPMipTexture> GetTextures() => textures;
+
+    public DirectoryInfo GetAddonDirectory() => addonDirectory;
+
+
+    public BSPResources GetResources() {
+        var resources = new BSPResources();
+        resources.AddSound(this, "ambient_generic", "message");
+        resources.AddSound(this, "ambient_music", "message");
+        resources.AddModel(this, "weapon_custom_ammo", "w_model");
+        resources.AddModel(this, "custom_precache", "model_1");
+        resources.AddSound(this, "weapon_custom_sound", "message");
+        resources.AddSound(this, "weapon_custom_bullet", "sounds");
+        resources.AddSound(this, "weapon_custom_bullet", "windup_snd");
+        resources.AddSound(this, "weapon_custom_bullet", "wind_down_snd");
+        foreach (var weapon in entities.Where((ent) => ent["classname"] == "weapon_custom")) {
+            if (weapon.ContainsKey("sprite_directory") && weapon.TryGetValue("weapon_name", out var weaponName)) {
+                var spriteTextPath = $"sprites/{weapon["sprite_directory"]}/{weaponName}.txt";
+                resources.TryAdd(spriteTextPath, new BSPResource(spriteTextPath, new BSPResourceEntitySource(weapon)));
+                foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, spriteTextPath))) {
+                    var splits = line.Split(null);
+                    var count = 0;
+                    foreach (var element in splits) {
+                        if (string.IsNullOrEmpty(element.Trim())) {
+                            continue;
+                        }
+
+                        if (count++ != 2) continue;
+                        resources.TryAdd($"sprites/{element.Trim()}.spr",
+                            new BSPResource($"sprites/{element.Trim()}.spr", new BSPResourceEntitySource(weapon)));
+                        break;
+                    }
+                }
+            }
+
+            if (weapon.TryGetValue("wpn_p_model", out var pmodel) && !pmodel.StartsWith("*")) {
+                resources.TryAdd(pmodel, new BSPResource(pmodel, new BSPResourceEntitySource(weapon)));
+            }
+
+            if (weapon.TryGetValue("wpn_v_model", out var vmodel) && !vmodel.StartsWith("*")) {
+                resources.TryAdd(vmodel, new BSPResource(vmodel, new BSPResourceEntitySource(weapon)));
+            }
+
+            if (weapon.TryGetValue("wpn_w_model", out var wmodel) && !wmodel.StartsWith("*")) {
+                resources.TryAdd(wmodel, new BSPResource(wmodel, new BSPResourceEntitySource(weapon)));
+            }
+        }
+
+        resources.AddSprite(this, "env_sprite", "model");
+        resources.AddModel(this, "item_generic", "model");
+        resources.AddModel(this, "func_breakable", "gibmodel");
+        resources.AddSound(this, "func_door", "noise1");
+        resources.AddSound(this, "func_door", "noise2");
+        resources.AddSprite(this, "trigger_camera", "cursor_sprite");
+        resources.AddModel(this, "squadmaker", "new_model");
+        resources.AddSkybox(this, "trigger_changesky", "skyname");
+        resources.AddSound(this, "func_train", "noise");
+        resources.AddModel(this, "weapon_custom_projectile", "projectile_mdl");
+        resources.AddModel(this, "item_inventory", "model");
+
+        resources.Clean();
+        return resources;
+    }
     public override string ToString() {
         return filename;
     }
