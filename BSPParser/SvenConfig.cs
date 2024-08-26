@@ -8,17 +8,40 @@ public class SvenConfig : Dictionary<string,string> {
     
     public SvenConfig(string tokens) {
         this.tokens = tokens;
-        while (TryParseKeyValue(out var key, out var value)) {
-            TryAdd(key, value);
+        List<string> buffer = new List<string>();
+        while (ptr < this.tokens.Length) {
+            buffer.Clear();
+            while (!Trim() && TryParseString(out var token)) {
+                buffer.Add(token);
+            }
+
+            if (buffer.Count == 1) {
+                TryAdd(buffer[0], "");
+            } else if (buffer.Count == 2) {
+                TryAdd(buffer[0], buffer[1].Trim(','));
+            }
         }
     }
-    private void Trim() {
-        while (ptr < tokens.Length && char.IsWhiteSpace(tokens[ptr])) { ptr++; }
-        // Skip comments
-        while (ptr < tokens.Length-1 && tokens[ptr] == '#') {
-            while (ptr < tokens.Length && tokens[ptr] != '\n') { ptr++; }
-            Trim();
+    private bool Trim() {
+        bool startedNewLine = ptr >= tokens.Length || tokens[ptr] == '\n';
+        while (ptr < tokens.Length && char.IsWhiteSpace(tokens[ptr])) {
+            ptr++;
+            if (ptr >= tokens.Length || tokens[ptr] == '\n') {
+                startedNewLine = true;
+            }
         }
+        // Skip comments
+        while (ptr < tokens.Length && tokens[ptr] == '#') {
+            while (ptr < tokens.Length && tokens[ptr] != '\n') {
+                ptr++;
+                if (ptr >= tokens.Length || tokens[ptr] == '\n') {
+                    startedNewLine = true;
+                }
+            }
+            
+            startedNewLine |= Trim();
+        }
+        return startedNewLine;
     }
     
     private bool TryParseString(out string str) {

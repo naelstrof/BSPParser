@@ -246,23 +246,13 @@ public class BSP {
         if (File.Exists(GetConfigFilePath())) {
             var config = new SvenConfig(File.ReadAllText(GetConfigFilePath()));
             if (config.TryGetValue("globalmodellist", out var modelReplacementFilePath)) {
-                var gmrFile = Path.Combine(addonDirectory.FullName, modelReplacementFilePath.TrimStart(['.','/']));
-                if (File.Exists(gmrFile)) {
-                    var keyPairs = new BSPTokenizer(File.ReadAllText(gmrFile)).GetKeyValues();
-                    foreach (var pair in keyPairs) {
-                        resources.TryAdd(pair.Value, new BSPResource(pair.Value, new BSPResourceFileSource(gmrFile)));
-                    }
-                }
+                ParseModelReplacementFile(resources, new BSPResourceFileSource(modelReplacementFilePath), modelReplacementFilePath);
             }
             if (config.TryGetValue("globalsoundlist", out var soundReplacementFilePath)) {
                 ParseSoundReplacementFile(resources, new BSPResourceFileSource(soundReplacementFilePath), soundReplacementFilePath);
             }
 
             if (config.TryGetValue("sentence_file", out var sentenceFilePath)) {
-                if (sentenceFilePath.StartsWith("../")) {
-                    sentenceFilePath = sentenceFilePath.Substring(3);
-                }
-
                 var sentenceFile = Path.Combine(addonDirectory.FullName, sentenceFilePath);
                 if (File.Exists(sentenceFile)) {
                     var keyPairs = new SentenceTokenizer(File.ReadAllText(sentenceFile));
@@ -308,6 +298,25 @@ public class BSP {
                 continue;
             }
             resources.TryAdd($"sound/{pair.Value}", new BSPResource($"sound/{pair.Value}", source));
+        }
+    }
+    
+    private void ParseModelReplacementFile(BSPResources resources, IResourceSource source, string value) {
+        var mapName = Path.GetFileName(filepath);
+        var startPath = Path.Combine(addonDirectory.FullName, "models", mapName.Substring(0, mapName.Length-4));
+        var providedPath = Path.Combine(startPath, value);
+        var uri1 = new Uri(providedPath);
+        var uri2 = new Uri(addonDirectory.FullName);
+        var relativePath = uri2.MakeRelativeUri(uri1).ToString();
+        resources.TryAdd(relativePath, new BSPResource(relativePath, source));
+        if (!File.Exists(providedPath)) {
+            return;
+        }
+        foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
+            if (pair.Value.StartsWith("*")) {
+                continue;
+            }
+            resources.TryAdd(pair.Value, new BSPResource(pair.Value, source));
         }
     }
 
