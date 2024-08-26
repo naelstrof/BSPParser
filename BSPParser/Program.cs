@@ -1,14 +1,14 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using System.Text;
-using BSPParser;
-
-Console.WriteLine("Hello, World!");
+﻿using BSPParser;
 
 FileInfo bspFile = new FileInfo(args[0]);
-DirectoryInfo? gameDirectory = bspFile.Directory?.Parent;
+DirectoryInfo? gameDirectory = bspFile.Directory?.Parent?.Parent;
 if (gameDirectory == null) {
-    throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
+    throw new Exception("Map isn't in a directory that makes sense! Make sure it's a map from a freshly unzipped sven coop map database. Isolated from the game and other unzipped maps.");
+}
+
+DirectoryInfo? check = new DirectoryInfo(Path.Combine(gameDirectory.FullName, "svencoop"));
+if (check is { Exists: true }) {
+    throw new Exception("Please don't run this within your game directory. This is intended to be ran on unzipped map files from sven map database. To post-process them.");
 }
 
 BSP bsp = new BSP(args[0]);

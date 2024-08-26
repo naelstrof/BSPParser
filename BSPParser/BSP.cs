@@ -24,6 +24,9 @@ public class BSP {
     private List<BSPEntity> entities;
     private List<BSPMipTexture> textures;
     private string filepath;
+    private string GetConfigFilePath() => $"{filepath.Substring(0, filepath.Length - 4)}.cfg";
+    private string GetResourceFilePath() => $"{filepath.Substring(0, filepath.Length - 4)}.res";
+    
     private DirectoryInfo addonDirectory;
     
     private static bool TryReadStruct<T>(Stream stream, out T output) {
@@ -65,22 +68,19 @@ public class BSP {
 
     private void ParseEntities(FileStream stream, BSPHeader header) {
         var entitiesLump = header.lump[LUMP_ENTITIES];
-        entities = new List<BSPEntity>(new BSPEntityTokenizer(ReadString(stream, entitiesLump.nOffset, entitiesLump.nLength), this));
+        entities = new List<BSPEntity>(new BSPTokenizer(ReadString(stream, entitiesLump.nOffset, entitiesLump.nLength), this));
     }
     
     //BROKEN
     private void ParseTextures(FileStream stream, BSPHeader header) {
         var texturesLump = header.lump[LUMP_TEXTURES];
-        TryReadStruct(stream, texturesLump.nOffset, out uint textureHeader);
-        Console.WriteLine($"Found {textureHeader} textures. Contained within {texturesLump.nLength}, starting at {texturesLump.nOffset}");
+        TryReadStruct(stream, texturesLump.nOffset, out uint textureCount);
         textures = new List<BSPMipTexture>();
-        List<int> textureOffsets = new List<int>();
-        for (int i = 0; i < textureHeader; i++) {
-            TryReadStruct(stream, out int mipOffset);
-            textureOffsets.Add(mipOffset);
-        }
-        foreach (var offset in textureOffsets) {
-            TryReadStruct(stream, texturesLump.nOffset + offset, out BSPMipTexture texture);
+        for (int i = 0; i < textureCount; i++) {
+            TryReadStruct(stream, texturesLump.nOffset + sizeof(int) * i + sizeof(uint), out int textureOffset);
+            Console.WriteLine(textureOffset);
+            TryReadStruct(stream, texturesLump.nOffset + textureOffset, out BSPMipTexture texture);
+            Console.WriteLine(texture);
             textures.Add(texture);
         }
     }
@@ -158,23 +158,11 @@ public class BSP {
                     continue;
                 }
 
-                foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, providedPath))) {
-                    var splits = line.Split(null);
-                    var count = 0;
-                    foreach (var element in splits) {
-                        if (string.IsNullOrEmpty(element.Trim().Trim('"'))) {
-                            continue;
-                        }
-
-                        if (count++ != 1) continue;
-                        if (element.Trim().Trim('"') == "null.wav") {
-                            continue;
-                        }
-
-                        resources.TryAdd($"sound/{element.Trim().Trim('"')}",
-                            new BSPResource($"sound/{element.Trim().Trim('"')}", new BSPResourceEntitySource(monster)));
-                        break;
+                foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
+                    if (pair.Value == "null.wav") {
+                        continue;
                     }
+                    resources.TryAdd($"sound/{pair.Value}", new BSPResource($"sound/{pair.Value}", new BSPResourceEntitySource(monster)));
                 }
             }
         }
@@ -196,12 +184,50 @@ public class BSP {
         resources.AddSound( "env_shake", "message");
         resources.AddSound( "env_spritetrain", "noise");
 
+        foreach (var file in addonDirectory.GetFiles()) {
+            if (file.FullName.EndsWith(".wad")) {
+                resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceArbitrary("by assumption")));
+            }
+        }
+
+        if (File.Exists(GetConfigFilePath())) {
+            var config = new SvenConfig(File.ReadAllText(GetConfigFilePath()));
+            if (config.TryGetValue("globalmodellist", out var modelReplacementFilePath)) {
+                if (modelReplacementFilePath.StartsWith("../")) {
+                    modelReplacementFilePath = modelReplacementFilePath.Substring(3);
+                }
+                var gmrFile = Path.Combine(Path.GetDirectoryName(filepath) ?? throw new InvalidOperationException("Map not found in a directory..."), modelReplacementFilePath);
+                if (File.Exists(gmrFile)) {
+                    var keyPairs = new BSPTokenizer(File.ReadAllText(gmrFile)).GetKeyValues();
+                    foreach (var pair in keyPairs) {
+                        resources.TryAdd(pair.Value, new BSPResource(pair.Value, new BSPResourceFileSource(gmrFile)));
+                    }
+                }
+            }
+            if (config.TryGetValue("globalsoundlist", out var soundReplacementFilePath)) {
+                if (soundReplacementFilePath.StartsWith("../")) {
+                    soundReplacementFilePath = soundReplacementFilePath.Substring(3);
+                }
+                var gsrFile = Path.Combine(Path.GetDirectoryName(filepath) ?? throw new InvalidOperationException("Map not found in a directory..."), soundReplacementFilePath);
+                if (File.Exists(gsrFile)) {
+                    var keyPairs = new BSPTokenizer(File.ReadAllText(gsrFile)).GetKeyValues();
+                    foreach (var pair in keyPairs) {
+                        if (pair.Value == "null.wav") {
+                            continue;
+                        }
+                        var soundPath = $"sound/{pair.Value}";
+                        resources.TryAdd(soundPath, new BSPResource(soundPath, new BSPResourceFileSource(gsrFile)));
+                    }
+                }
+            }
+        }
+
         resources.Clean();
         return resources;
     }
 
     public BSPResources GetResourceFile() {
-        return new BSPResources($"{filepath.Substring(0, filepath.Length - 4)}.res", this);
+        return new BSPResources(GetResourceFilePath(), this);
     }
     public BSPResources GetMalformedResources() {
         var original_resources = GetResourceFile();

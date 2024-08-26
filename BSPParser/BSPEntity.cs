@@ -3,9 +3,9 @@ using System.Text;
 namespace BSPParser;
 
 public class BSPEntity : Dictionary<string,string> {
-    private BSP parent;
-    public BSP GetParent() => parent;
-    public BSPEntity(BSP parent) : base() {
+    private BSP? parent;
+    public BSP? GetParent() => parent;
+    public BSPEntity(BSP? parent) : base() {
         this.parent = parent;
     }
     public override string ToString() {
