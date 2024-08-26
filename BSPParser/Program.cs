@@ -22,36 +22,27 @@ foreach (var file in mapDirectory.GetFiles()) {
         continue;
     }
 
-    Console.WriteLine($"{file.FullName}:");
+    Console.WriteLine($"{file.Name}:");
     BSP bsp = new BSP(file.FullName);
 
     BSPResources generated_resources = bsp.GetResources();
     BSPResources original_resources = bsp.GetResourceFile();
-    BSPResources malformed_resources = bsp.GetMalformedResources();
-
-    Console.WriteLine("Assets the user definitely typo'd the casing on (messes up FastDL):");
-    foreach (var pair in malformed_resources) {
-        Console.WriteLine($"\t{pair.Value}");
-    }
-
-    Console.WriteLine("Assets the user definitely forgot to include:");
-    foreach (var resource in generated_resources.Where((a) =>
-                 !original_resources.ContainsKey(a.Key) &&
-                 File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\t{resource.Value}");
-    }
-
-    Console.WriteLine("User included resources that we missed (possibly referred to by script):");
+    
+    bsp.FixMalformedResources();
+    
+    // Assets that we missed, possibly referred to by script, or erroneously included by the user. Impossible to differentiate. So we add them all.
     foreach (var resource in original_resources.Where((a) =>
-                 !generated_resources.ContainsKey(a.Key) && !malformed_resources.ContainsKey(a.Key) &&
-                 File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\t{resource.Value}");
+                 !generated_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
+        generated_resources.TryAdd(resource.Key, resource.Value);
+    }
+    
+    foreach (var resource in generated_resources.Where((a) => !original_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
+        Console.WriteLine($"\tAdding: {resource.Value}");
+    }
+    
+    foreach (var resource in original_resources.Where((a) => !generated_resources.ContainsKey(a.Key) && !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
+        Console.WriteLine($"\tRemoving: {resource.Value}");
     }
 
-    Console.WriteLine("User included resources that must be included in a wad, and probably should be removed:");
-    foreach (var resource in original_resources.Where((a) =>
-                 !generated_resources.ContainsKey(a.Key) && !malformed_resources.ContainsKey(a.Key) &&
-                 !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\t{resource.Value}");
-    }
+    generated_resources.Save(bsp.GetResourceFilePath());
 }

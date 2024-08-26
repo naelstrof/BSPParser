@@ -25,7 +25,7 @@ public class BSP {
     private List<BSPMipTexture> textures;
     private string filepath;
     private string GetConfigFilePath() => $"{filepath.Substring(0, filepath.Length - 4)}.cfg";
-    private string GetResourceFilePath() => $"{filepath.Substring(0, filepath.Length - 4)}.res";
+    public string GetResourceFilePath() => $"{filepath.Substring(0, filepath.Length - 4)}.res";
     
     private DirectoryInfo addonDirectory;
     
@@ -341,6 +341,31 @@ public class BSP {
             foreach (var file in directoryInfo.GetFiles()) {
                 if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
                     malformed_resources.TryAdd(check.Key, check.Value);
+                }
+            }
+        }
+        return malformed_resources;
+    }
+    
+    public BSPResources FixMalformedResources() {
+        var original_resources = GetResourceFile();
+        // we assume the BSP has the correct casing.
+        var assetsForgottenToBeIncluded = GetResources().Where((a) => !original_resources.ContainsKey(a.Key));
+        var malformed_resources = new BSPResources(this);
+        foreach (var check in assetsForgottenToBeIncluded) {
+            var fileName = Path.GetFileName(check.Key);
+            var directory = Path.GetDirectoryName(check.Key);
+            if (directory == null) {
+                continue;
+            }
+            var directoryInfo = new DirectoryInfo(Path.Combine(GetAddonDirectory().FullName, directory));
+            if (!directoryInfo.Exists) {
+                continue;
+            }
+            foreach (var file in directoryInfo.GetFiles()) {
+                if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
+                    Console.WriteLine($"Renaming {file.FullName} to {Path.Combine(directoryInfo.FullName, fileName)}");
+                    File.Move(file.FullName, Path.Combine(directoryInfo.FullName, fileName));
                 }
             }
         }

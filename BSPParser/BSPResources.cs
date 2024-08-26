@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace BSPParser;
 
 public class BSPResources : Dictionary<string,BSPResource> {
@@ -63,6 +65,15 @@ public class BSPResources : Dictionary<string,BSPResource> {
             CheckSkyboxAndAdd( $"gfx/env/{skyname}up.tga", new BSPResourceEntitySource(skychange));
             CheckSkyboxAndAdd( $"gfx/env/{skyname}up.bmp", new BSPResourceEntitySource(skychange));
         }
+    }
+
+    public void Save(string filepath) {
+        StringBuilder builder = new StringBuilder();
+        foreach (var pair in this) {
+            builder.Append($"{pair.Key}\r\n");
+        }
+
+        File.WriteAllText(filepath, builder.ToString());
     }
 
 }
