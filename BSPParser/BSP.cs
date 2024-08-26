@@ -151,38 +151,91 @@ public class BSP {
                 }
                 resources.TryAdd(monsterModel, new BSPResource(monsterModel, new BSPResourceEntitySource(monster)));
             }
-            if (monster.TryGetValue("soundlist", out var soundlist)) {
-                var providedPath = $"sound/{soundlist.Trim().TrimStart(['.', '/'])}";
-                resources.TryAdd(providedPath, new BSPResource(providedPath, new BSPResourceEntitySource(monster)));
-                if (!File.Exists(Path.Combine(addonDirectory.FullName, providedPath))) {
-                    continue;
-                }
-
-                foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
-                    if (pair.Value == "null.wav") {
-                        continue;
-                    }
-                    resources.TryAdd($"sound/{pair.Value}", new BSPResource($"sound/{pair.Value}", new BSPResourceEntitySource(monster)));
-                }
-            }
         }
 
         resources.AddSprite( "env_sprite", "model");
         resources.AddModel( "item_generic", "model");
         resources.AddModel( "func_breakable", "gibmodel");
-        resources.AddSound( "func_door", "noise1");
-        resources.AddSound( "func_door", "noise2");
         resources.AddSprite( "trigger_camera", "cursor_sprite");
+        resources.AddSprite( "cycler_wreckage", "model");
+        resources.AddSprite( "env_beam", "texture");
+        resources.AddSprite( "env_laser", "texture");
+        resources.AddSprite( "env_sprite", "model");
         resources.AddModel( "squadmaker", "new_model");
+        resources.AddModel( "env_beverage", "model");
         resources.AddSkybox( "trigger_changesky", "skyname");
+        resources.AddSkybox( "worldspawn", "skyname");
         resources.AddSound( "func_train", "noise");
         resources.AddModel( "weapon_custom_projectile", "projectile_mdl");
         resources.AddModel( "item_inventory", "model");
         resources.AddModel( "trigger_createentity", "-model");
         resources.AddSound( "scripted_sentence", "sentence");
         resources.AddModel( "weaponbox", "model");
+        resources.AddModel( "cycler", "model");
+        resources.AddModel( "env_shooter", "shootmodel");
         resources.AddSound( "env_shake", "message");
+        resources.AddSprite( "env_spritetrain", "model");
         resources.AddSound( "env_spritetrain", "noise");
+        resources.AddSound( "env_spritetrain", "noise1");
+        resources.AddSound( "env_spritetrain", "stopsnd");
+        resources.AddSound( "env_spritetrain", "movesnd");
+        resources.AddSound( "func_button", "sounds");
+        resources.AddSound( "func_button", "noise");
+        resources.AddSound( "func_button", "locked_sound_override");
+        resources.AddSound( "func_button", "unlocked_sound_override");
+        resources.AddSound( "func_door", "movesnd");
+        resources.AddSound( "func_door", "noise1");
+        resources.AddSound( "func_door", "noise2");
+        resources.AddSound( "func_door", "stopsnd");
+        resources.AddSound( "func_door", "locked_sound");
+        resources.AddSound( "func_door", "unlocked_sound");
+        resources.AddSound( "func_door", "locked_sound_override");
+        resources.AddSound( "func_door", "unlocked_sound_override");
+        resources.AddSound( "func_door_rotating", "movesnd");
+        resources.AddSound( "func_door_rotating", "noise1");
+        resources.AddSound( "func_door_rotating", "noise2");
+        resources.AddSound( "func_door_rotating", "stopsnd");
+        resources.AddSound( "func_door_rotating", "locked_sound");
+        resources.AddSound( "func_door_rotating", "unlocked_sound");
+        resources.AddSound( "func_door_rotating", "locked_sound_override");
+        resources.AddSound( "func_door_rotating", "unlocked_sound_override");
+        resources.AddSound( "func_healthcharger", "CustomDeniedSound");
+        resources.AddSound( "func_healthcharger", "CustomStartSound");
+        resources.AddSound( "func_healthcharger", "CustomLoopSound");
+        resources.AddSound( "func_plat", "movesnd");
+        resources.AddSound( "func_plat", "stopsnd");
+        resources.AddSound( "func_plat", "noise");
+        resources.AddSound( "func_plat", "noise1");
+        resources.AddSound( "func_platrot", "movesnd");
+        resources.AddSound( "func_platrot", "stopsnd");
+        resources.AddSound( "func_platrot", "noise");
+        resources.AddSound( "func_platrot", "noise1");
+        resources.AddModel( "func_pushable", "gibmodel");
+        resources.AddSound( "func_recharge", "CustomDeniedSound");
+        resources.AddSound( "func_recharge", "CustomStartSound");
+        resources.AddSound( "func_recharge", "CustomLoopSound");
+        resources.AddSound( "func_rot_button", "sounds");
+        resources.AddSound( "func_rot_button", "noise");
+        resources.AddSound( "func_rot_button", "locked_sound_override");
+        resources.AddSound( "func_rot_button", "unlocked_sound_override");
+        resources.AddSound( "func_train", "movesnd");
+        resources.AddSound( "func_train", "stopsnd");
+        resources.AddSound( "func_train", "noise");
+        resources.AddSound( "func_train", "noise1");
+        resources.AddModel( "trigger_changemodel", "model");
+
+        foreach (var tank in GetEntities().Where((ent) => ent["classname"] == "func_tank" || ent["classname"] == "func_tanklaser")) {
+            if (tank.TryGetValue("spritesmoke", out var spriteSmoke)) {
+                resources.TryAdd($"sprites/{spriteSmoke}", new BSPResource($"sprites/{spriteSmoke}", new BSPResourceEntitySource(tank)));
+            }
+            if (tank.TryGetValue("spriteflash", out var spriteFlash)) {
+                resources.TryAdd($"sprites/{spriteFlash}", new BSPResource($"sprites/{spriteFlash}", new BSPResourceEntitySource(tank)));
+            }
+        }
+
+        foreach (var soundListEntity in GetEntities().Where((ent) => ent.ContainsKey("soundlist"))) {
+            ParseSoundReplacementFile(resources, new BSPResourceEntitySource(soundListEntity), soundListEntity["soundlist"]);
+        }
 
         foreach (var file in addonDirectory.GetFiles()) {
             if (file.FullName.EndsWith(".wad")) {
@@ -193,10 +246,7 @@ public class BSP {
         if (File.Exists(GetConfigFilePath())) {
             var config = new SvenConfig(File.ReadAllText(GetConfigFilePath()));
             if (config.TryGetValue("globalmodellist", out var modelReplacementFilePath)) {
-                if (modelReplacementFilePath.StartsWith("../")) {
-                    modelReplacementFilePath = modelReplacementFilePath.Substring(3);
-                }
-                var gmrFile = Path.Combine(Path.GetDirectoryName(filepath) ?? throw new InvalidOperationException("Map not found in a directory..."), modelReplacementFilePath);
+                var gmrFile = Path.Combine(addonDirectory.FullName, modelReplacementFilePath.TrimStart(['.','/']));
                 if (File.Exists(gmrFile)) {
                     var keyPairs = new BSPTokenizer(File.ReadAllText(gmrFile)).GetKeyValues();
                     foreach (var pair in keyPairs) {
@@ -205,25 +255,60 @@ public class BSP {
                 }
             }
             if (config.TryGetValue("globalsoundlist", out var soundReplacementFilePath)) {
-                if (soundReplacementFilePath.StartsWith("../")) {
-                    soundReplacementFilePath = soundReplacementFilePath.Substring(3);
+                ParseSoundReplacementFile(resources, new BSPResourceFileSource(soundReplacementFilePath), soundReplacementFilePath);
+            }
+
+            if (config.TryGetValue("sentence_file", out var sentenceFilePath)) {
+                if (sentenceFilePath.StartsWith("../")) {
+                    sentenceFilePath = sentenceFilePath.Substring(3);
                 }
-                var gsrFile = Path.Combine(Path.GetDirectoryName(filepath) ?? throw new InvalidOperationException("Map not found in a directory..."), soundReplacementFilePath);
-                if (File.Exists(gsrFile)) {
-                    var keyPairs = new BSPTokenizer(File.ReadAllText(gsrFile)).GetKeyValues();
+
+                var sentenceFile = Path.Combine(addonDirectory.FullName, sentenceFilePath);
+                if (File.Exists(sentenceFile)) {
+                    var keyPairs = new SentenceTokenizer(File.ReadAllText(sentenceFile));
                     foreach (var pair in keyPairs) {
+                        // Double check we're actually using a value from the sentences.
+                        if (!pair.Key.StartsWith("HEV") && !GetEntities().Any((ent) => ent.TryGetValue("sentence", out var sentenceValue) && sentenceValue.Trim('!') == pair.Key ||
+                                                                                               ent.TryGetValue("UseSentence", out var useSentenceValue) && useSentenceValue.Trim('!') == pair.Key ||
+                                                                                               ent.TryGetValue("locked_sentence_override", out var lockedSentenceValue) && lockedSentenceValue.Trim('!') == pair.Key ||
+                                                                                               ent.TryGetValue("unlocked_sentence_override", out var unlockedSentenceOverride) && unlockedSentenceOverride.Trim('!') == pair.Key ||
+                                                                                               ent.TryGetValue("locked_sentence", out var locked) && locked.Trim('!') == pair.Key ||
+                                                                                               ent.TryGetValue("unlocked_sentence", out var unlocked) && unlocked.Trim('!') == pair.Key
+                            )) {
+                            continue;
+                        }
                         if (pair.Value == "null.wav") {
                             continue;
                         }
-                        var soundPath = $"sound/{pair.Value}";
-                        resources.TryAdd(soundPath, new BSPResource(soundPath, new BSPResourceFileSource(gsrFile)));
+                        var soundPath = $"sound/{pair.Value}.wav";
+                        resources.TryAdd(soundPath, new BSPResource(soundPath, new BSPResourceFileSource(sentenceFile)));
                     }
                 }
+                
             }
         }
 
         resources.Clean();
         return resources;
+    }
+
+    private void ParseSoundReplacementFile(BSPResources resources, IResourceSource source, string value) {
+        var mapName = Path.GetFileName(filepath);
+        var startPath = Path.Combine(addonDirectory.FullName, "sound", mapName.Substring(0, mapName.Length-4));
+        var providedPath = Path.Combine(startPath, value);
+        var uri1 = new Uri(providedPath);
+        var uri2 = new Uri(addonDirectory.FullName);
+        var relativePath = uri2.MakeRelativeUri(uri1).ToString();
+        resources.TryAdd(relativePath, new BSPResource(relativePath, source));
+        if (!File.Exists(providedPath)) {
+            return;
+        }
+        foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
+            if (pair.Value == "null.wav") {
+                continue;
+            }
+            resources.TryAdd($"sound/{pair.Value}", new BSPResource($"sound/{pair.Value}", source));
+        }
     }
 
     public BSPResources GetResourceFile() {
@@ -235,9 +320,6 @@ public class BSP {
         var assetsForgottenToBeIncluded = GetResources().Where((a) => !original_resources.ContainsKey(a.Key));
         var malformed_resources = new BSPResources(this);
         foreach (var check in assetsForgottenToBeIncluded) {
-            if (File.Exists(Path.Combine(GetAddonDirectory().FullName, check.Key))) {
-                continue;
-            }
             var fileName = Path.GetFileName(check.Key);
             var directory = Path.GetDirectoryName(check.Key);
             if (directory == null) {
@@ -248,7 +330,7 @@ public class BSP {
                 continue;
             }
             foreach (var file in directoryInfo.GetFiles()) {
-                if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant()) {
+                if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
                     malformed_resources.TryAdd(check.Key, check.Value);
                 }
             }
