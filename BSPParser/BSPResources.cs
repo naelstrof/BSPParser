@@ -9,6 +9,9 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     public BSPResources(string resourcesFilePath, BSP bsp) {
         this.bsp = bsp;
+        if (!File.Exists(resourcesFilePath)) {
+            return;
+        }
         var filesource = new BSPResourceFileSource(resourcesFilePath);
         foreach (var line in File.ReadLines(resourcesFilePath)) {
             TryAdd(line.Trim(), new BSPResource(line.Trim(),filesource));
