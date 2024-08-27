@@ -14,7 +14,7 @@ It very specifically reads a bsp directly to find all resources that should be i
 
 Since this is so highly specialized, it's built within heavy limitations.
 
-- Custom textures within .wads are ignored, and in-fact, all wads are included by assumption. I didn't want to write a bsp texture lump parser, or wad parser. Sorry! This objectively worsens the quality of correctly configured resource files.
+- Custom textures within .wads are ignored, and in-fact, all wads are included by assumption. I didn't want to write a bsp texture lump parser, or wad parser. Sorry! This objectively worsens the quality of correctly configured resource files. (Though improves utterly broken ones!)
 
 ## Showcase
 
