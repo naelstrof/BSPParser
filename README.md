@@ -18,7 +18,7 @@ Since this is so highly specialized, it's built within heavy limitations.
 
 ## Showcase
 
-After running it on the [Hazardous Course 2](http://scmapdb.wikidot.com/map:hazardous-course-2) map pack, it finds a skybox in a trigger on map `maps/hc2_b2b.bsp`. Fixing an immersion break where suddenly you are no longer in space.
+After running it on the [Hazardous Course 2](http://scmapdb.wikidot.com/map:hazardous-course-2) map pack, it finds a skybox in a trigger on map `maps/hc2_b2b.bsp` and adds it to the resources file. Fixing an immersion break for clients where suddenly you are no longer in space.
 
 ![maps/hc2_b2b](https://github.com/user-attachments/assets/260bcd21-f62d-44d4-8688-aafe5d93417a)
 
