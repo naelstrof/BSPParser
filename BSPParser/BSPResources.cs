@@ -27,7 +27,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     
     public void AddModel(string classname, string key) {
-        foreach (var ent in bsp.GetEntities().Where((ent) => ent["classname"] == classname && ent.ContainsKey(key))) {
+        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
             if (ent[key].StartsWith("*")) {
                 continue;
             }
@@ -35,13 +35,13 @@ public class BSPResources : Dictionary<string,BSPResource> {
         }
     }
     public void AddSound(string classname, string key) {
-        foreach (var ent in bsp.GetEntities().Where((ent) => ent["classname"] == classname && ent.ContainsKey(key))) {
+        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
             var path = $"sound/{ent[key].TrimStart('+')}";
             TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
         }
     }
     public void AddSprite(string classname, string key) {
-        foreach (var ent in bsp.GetEntities().Where((ent) => ent["classname"] == classname && ent.ContainsKey(key))) {
+        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
             TryAdd(ent[key], new BSPResource(ent[key], new BSPResourceEntitySource(ent)));
         }
     }
@@ -53,7 +53,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     public void AddSkybox(string classname, string key) {
-        foreach (var skychange in bsp.GetEntities().Where((ent) => ent["classname"] == classname && ent.ContainsKey(key))) {
+        foreach (var skychange in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
             var skyname = skychange[key];
             CheckSkyboxAndAdd( $"gfx/env/{skyname}bk.tga", new BSPResourceEntitySource(skychange));
             CheckSkyboxAndAdd( $"gfx/env/{skyname}bk.bmp", new BSPResourceEntitySource(skychange));

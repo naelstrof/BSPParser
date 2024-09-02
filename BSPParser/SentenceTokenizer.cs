@@ -17,7 +17,10 @@ public class SentenceTokenizer : Dictionary<string,string> {
             if (buffer.Count == 2) {
                 TryAdd(buffer[0], buffer[1].Trim(','));
             } else if (buffer.Count > 2) {
-                string rootPath = buffer[1].Substring(0,buffer[1].LastIndexOf('/'));
+                string rootPath = buffer[1];
+		if (buffer[1].LastIndexOf('/') != -1) {
+		    rootPath = buffer[1].Substring(0,buffer[1].LastIndexOf('/'));
+		}
                 TryAdd(buffer[0], buffer[1].Trim(','));
                 for (int i = 1; i < buffer.Count; i++) {
                     TryAdd(buffer[0], $"{rootPath}/{buffer[1].Trim(',')}");

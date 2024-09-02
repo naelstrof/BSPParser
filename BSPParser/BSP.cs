@@ -108,7 +108,7 @@ public class BSP {
         resources.AddSound( "weapon_custom_bullet", "sounds");
         resources.AddSound( "weapon_custom_bullet", "windup_snd");
         resources.AddSound( "weapon_custom_bullet", "wind_down_snd");
-        foreach (var weapon in entities.Where((ent) => ent["classname"].StartsWith("weapon_"))) {
+        foreach (var weapon in entities.Where((ent) => ent.ContainsKey("classname") && ent["classname"].StartsWith("weapon_"))) {
             if (weapon.ContainsKey("sprite_directory") && weapon.TryGetValue("weapon_name", out var weaponName)) {
                 var spriteTextPath = $"sprites/{weapon["sprite_directory"]}/{weaponName}.txt";
                 resources.TryAdd(spriteTextPath, new BSPResource(spriteTextPath, new BSPResourceEntitySource(weapon)));
@@ -144,7 +144,7 @@ public class BSP {
             }
         }
 
-        foreach (var monster in entities.Where((ent) => ent["classname"].StartsWith("monster") || ent["classname"] == "squadmaker")) {
+        foreach (var monster in entities.Where((ent) => ent.ContainsKey("classname") && ent["classname"].StartsWith("monster") || ent.ContainsKey("classname") && ent["classname"] == "squadmaker")) {
             if (monster.TryGetValue("model", out string? monsterModel)) {
                 if (monsterModel.StartsWith("*")) {
                     continue;
@@ -224,7 +224,7 @@ public class BSP {
         resources.AddSound( "func_train", "noise1");
         resources.AddModel( "trigger_changemodel", "model");
 
-        foreach (var tank in GetEntities().Where((ent) => ent["classname"] == "func_tank" || ent["classname"] == "func_tanklaser")) {
+        foreach (var tank in GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "func_tank" || ent.ContainsKey("classname") && ent["classname"] == "func_tanklaser")) {
             if (tank.TryGetValue("spritesmoke", out var spriteSmoke)) {
                 resources.TryAdd($"sprites/{spriteSmoke}", new BSPResource($"sprites/{spriteSmoke}", new BSPResourceEntitySource(tank)));
             }
@@ -237,11 +237,11 @@ public class BSP {
             ParseSoundReplacementFile(resources, new BSPResourceEntitySource(soundListEntity), soundListEntity["soundlist"]);
         }
 
-        foreach (var file in addonDirectory.GetFiles()) {
-            if (file.FullName.EndsWith(".wad")) {
-                resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceArbitrary("by assumption")));
-            }
-        }
+        //foreach (var file in addonDirectory.GetFiles()) {
+            //if (file.FullName.EndsWith(".wad")) {
+                //resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceArbitrary("by assumption")));
+            //}
+        //}
 
         if (File.Exists(GetConfigFilePath())) {
             var config = new SvenConfig(File.ReadAllText(GetConfigFilePath()));
@@ -362,6 +362,10 @@ public class BSP {
             if (!directoryInfo.Exists) {
                 continue;
             }
+	    // We hit something, even if it might be the wrong thing, there's no way to know....
+	    if (File.Exists(Path.Combine(directoryInfo.FullName,fileName))) {
+		continue;
+	    }
             foreach (var file in directoryInfo.GetFiles()) {
                 if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
                     Console.WriteLine($"Renaming {file.FullName} to {Path.Combine(directoryInfo.FullName, fileName)}");

@@ -49,7 +49,7 @@ public class BSPTokenizer(string tokens, BSP? bsp = null) : IEnumerable<BSPEntit
     private bool TryGetNextEntity(out BSPEntity entity) {
         entity = new BSPEntity(bsp);
         Trim();
-        if (tokens[ptr++] != '{') {
+        if (ptr >= tokens.Length || tokens[ptr++] != '{') {
             return false;
         }
         Trim();
@@ -59,7 +59,7 @@ public class BSPTokenizer(string tokens, BSP? bsp = null) : IEnumerable<BSPEntit
             }
         }
         Trim();
-        if (tokens[ptr++] != '}') {
+        if (ptr >= tokens.Length || tokens[ptr++] != '}') {
             return false;
         }
         return true;

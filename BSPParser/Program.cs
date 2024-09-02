@@ -43,6 +43,5 @@ foreach (var file in mapDirectory.GetFiles()) {
     foreach (var resource in original_resources.Where((a) => !generated_resources.ContainsKey(a.Key) && !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
         Console.WriteLine($"\tRemoving: {resource.Value}");
     }
-
     generated_resources.Save(bsp.GetResourceFilePath());
 }
