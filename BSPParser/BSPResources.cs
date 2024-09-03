@@ -28,21 +28,62 @@ public class BSPResources : Dictionary<string,BSPResource> {
     
     public void AddModel(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
+            var path = ent[key];
             if (ent[key].StartsWith("*")) {
                 continue;
             }
-            TryAdd(ent[key], new BSPResource(ent[key],new BSPResourceEntitySource(ent)));
+            if (string.IsNullOrEmpty(Path.GetExtension(path))) {
+                var findModel = FindFileWithoutExtension(path);
+                if (findModel != null) {
+                    path += Path.GetExtension(findModel);
+                } else {
+                    path += ".mdl";
+                }
+            }
+            TryAdd(path, new BSPResource(path,new BSPResourceEntitySource(ent)));
         }
     }
+
+    private string? FindFileWithoutExtension(string path) {
+        var folder = Path.GetDirectoryName(path);
+        if (folder == null) return null;
+        if (!Directory.Exists(folder)) {
+            return null;
+        }
+        foreach (var file in Directory.GetFiles(folder)) {
+            if (Path.GetFileNameWithoutExtension(file) == Path.GetFileNameWithoutExtension(path)) {
+                return file;
+            }
+        }
+        return null;
+    }
+    
     public void AddSound(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = $"sound/{ent[key].TrimStart('+')}";
+            var path = $"sound/{ent[key].TrimStart(['+','!'])}";
+            if (string.IsNullOrEmpty(Path.GetExtension(path))) {
+                var findSound = FindFileWithoutExtension(path);
+                if (findSound != null) {
+                    path += Path.GetExtension(findSound);
+                } else {
+                    path += ".wav";
+                }
+            }
             TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
         }
     }
     public void AddSprite(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            TryAdd(ent[key], new BSPResource(ent[key], new BSPResourceEntitySource(ent)));
+            var path = ent[key];
+            if (string.IsNullOrEmpty(Path.GetExtension(path))) {
+                var findSprite = FindFileWithoutExtension(path);
+                if (findSprite != null) {
+                    path += Path.GetExtension(findSprite);
+                } else {
+                    path += ".spr";
+                }
+            }
+            TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
         }
     }
     

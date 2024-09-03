@@ -347,6 +347,11 @@ public class BSP {
         return malformed_resources;
     }
     
+    private static bool FileExistsCaseSensitive(string filename) {
+        string? name = Path.GetDirectoryName(filename);
+        return name != null && Array.Exists(Directory.GetFiles(name), s => s == Path.GetFullPath(filename));
+    }
+    
     public BSPResources FixMalformedResources() {
         var original_resources = GetResourceFile();
         // we assume the BSP has the correct casing.
@@ -362,10 +367,10 @@ public class BSP {
             if (!directoryInfo.Exists) {
                 continue;
             }
-	    // We hit something, even if it might be the wrong thing, there's no way to know....
-	    if (File.Exists(Path.Combine(directoryInfo.FullName,fileName))) {
-		continue;
-	    }
+            // We hit something, even if it might be the wrong thing, there's no way to know....
+            if (FileExistsCaseSensitive(Path.Combine(directoryInfo.FullName,fileName))) {
+                continue;
+            }
             foreach (var file in directoryInfo.GetFiles()) {
                 if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
                     Console.WriteLine($"Renaming {file.FullName} to {Path.Combine(directoryInfo.FullName, fileName)}");
