@@ -292,7 +292,7 @@ public class BSP {
         var uri2 = new Uri(addonDirectory.FullName);
         var relativePath = uri2.MakeRelativeUri(uri1).ToString();
         if (relativePath.StartsWith(addonDirectory.Name)) {
-            relativePath = relativePath.Substring(relativePath.IndexOf(Path.PathSeparator));
+            relativePath = relativePath.Substring(addonDirectory.Name.Length+1);
         }
         resources.TryAdd(relativePath, new BSPResource(relativePath, source));
         if (!File.Exists(providedPath)) {
@@ -314,7 +314,7 @@ public class BSP {
         var uri2 = new Uri(addonDirectory.FullName);
         var relativePath = uri2.MakeRelativeUri(uri1).ToString();
         if (relativePath.StartsWith(addonDirectory.Name)) {
-            relativePath = relativePath.Substring(relativePath.IndexOf(Path.PathSeparator));
+            relativePath = relativePath.Substring(addonDirectory.Name.Length+1);
         }
         resources.TryAdd(relativePath, new BSPResource(relativePath, source));
         if (!File.Exists(providedPath)) {
