@@ -29,7 +29,7 @@ public class BSP {
     
     private DirectoryInfo addonDirectory;
     
-    private static bool TryReadStruct<T>(Stream stream, out T output) {
+    private static bool TryReadStruct<T>(Stream stream, out T? output) {
         byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
         var read = stream.Read(buffer, 0, Marshal.SizeOf(typeof(T)));
         GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
@@ -43,7 +43,7 @@ public class BSP {
         output = typedStruct;
         return true;
     }
-    private static bool TryReadStruct<T>(Stream stream, long offset, out T output) {
+    private static bool TryReadStruct<T>(Stream stream, long offset, out T? output) {
         byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
         stream.Seek(offset, SeekOrigin.Begin);
         var read = stream.Read(buffer, 0, Marshal.SizeOf(typeof(T)));
@@ -86,6 +86,8 @@ public class BSP {
     }
 
     public BSP(string filePath) {
+        entities = new List<BSPEntity>();
+        textures = new List<BSPMipTexture>();
         this.filepath = filePath;
         FileStream stream = new FileStream(filePath, FileMode.Open);
         addonDirectory = new FileInfo(filePath).Directory?.Parent ?? throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
