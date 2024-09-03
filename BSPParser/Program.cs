@@ -30,6 +30,11 @@ foreach (var file in mapDirectory.GetFiles()) {
     
     bsp.FixMalformedResources();
     
+    foreach (var missingResource in generated_resources.Where((a) => !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
+        Console.WriteLine($"\tMissing: {missingResource.Key}");
+        generated_resources.Remove(missingResource.Key);
+    }
+    
     // Assets that we missed, possibly referred to by script, or erroneously included by the user. Impossible to differentiate. So we add them all.
     foreach (var resource in original_resources.Where((a) =>
                  !generated_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
@@ -39,7 +44,7 @@ foreach (var file in mapDirectory.GetFiles()) {
     foreach (var resource in generated_resources.Where((a) => !original_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
         Console.WriteLine($"\tAdding: {resource.Value}");
     }
-    
+
     foreach (var resource in original_resources.Where((a) => !generated_resources.ContainsKey(a.Key) && !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
         Console.WriteLine($"\tRemoving: {resource.Value}");
     }
