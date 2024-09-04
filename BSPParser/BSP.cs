@@ -239,11 +239,14 @@ public class BSP {
             ParseSoundReplacementFile(resources, new BSPResourceEntitySource(soundListEntity), soundListEntity["soundlist"]);
         }
 
-        //foreach (var file in addonDirectory.GetFiles()) {
-            //if (file.FullName.EndsWith(".wad")) {
-                //resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceArbitrary("by assumption")));
-            //}
-        //}
+        // We automatically detect if we're scanning an individual addon or not, and include wads by assumption if we are.
+        if (addonDirectory.Name != "svencoop_addon" && addonDirectory.Name != "svencoop" && addonDirectory.Name != "svencoop_downloads") {
+            foreach (var file in addonDirectory.GetFiles()) {
+                if (file.FullName.EndsWith(".wad")) {
+                    resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceArbitrary("by assumption")));
+                }
+            }
+        }
 
         if (File.Exists(GetConfigFilePath())) {
             var config = new SvenConfig(File.ReadAllText(GetConfigFilePath()));
@@ -260,16 +263,20 @@ public class BSP {
                     var keyPairs = new SentenceTokenizer(File.ReadAllText(sentenceFile));
                     foreach (var pair in keyPairs) {
                         // Double check we're actually using a value from the sentences.
-                        if (!pair.Key.StartsWith("HEV") && !GetEntities().Any((ent) => ent.TryGetValue("sentence", out var sentenceValue) && sentenceValue.Trim('!') == pair.Key ||
-                                                                                               ent.TryGetValue("UseSentence", out var useSentenceValue) && useSentenceValue.Trim('!') == pair.Key ||
-                                                                                               ent.TryGetValue("locked_sentence_override", out var lockedSentenceValue) && lockedSentenceValue.Trim('!') == pair.Key ||
-                                                                                               ent.TryGetValue("unlocked_sentence_override", out var unlockedSentenceOverride) && unlockedSentenceOverride.Trim('!') == pair.Key ||
-                                                                                               ent.TryGetValue("locked_sentence", out var locked) && locked.Trim('!') == pair.Key ||
-                                                                                               ent.TryGetValue("unlocked_sentence", out var unlocked) && unlocked.Trim('!') == pair.Key
+                        if (!pair.Key.StartsWith("HEV") && !GetEntities().Any((ent) => {
+                                    foreach (var innerPair in ent) {
+                                        if (innerPair.Value.StartsWith('!') && innerPair.Value.Trim('!') == pair.Key) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                }
                             )) {
                             continue;
                         }
-                        if (pair.Value == "null.wav") {
+
+                        var sound = pair.Value.Trim('.');
+                        if (sound == "null") {
                             continue;
                         }
                         var soundPath = $"sound/{pair.Value}.wav";
@@ -360,11 +367,10 @@ public class BSP {
         return name != null && Array.Exists(Directory.GetFiles(name), s => s == Path.GetFullPath(filename));
     }
     
-    public BSPResources FixMalformedResources() {
+    public void FixMalformedResources() {
         var original_resources = GetResourceFile();
         // we assume the BSP has the correct casing.
         var assetsForgottenToBeIncluded = GetResources().Where((a) => !original_resources.ContainsKey(a.Key));
-        var malformed_resources = new BSPResources(this);
         foreach (var check in assetsForgottenToBeIncluded) {
             var fileName = Path.GetFileName(check.Key);
             var directory = Path.GetDirectoryName(check.Key);
@@ -386,7 +392,6 @@ public class BSP {
                 }
             }
         }
-        return malformed_resources;
     }
     public override string ToString() {
         return Path.GetFileName(filepath);

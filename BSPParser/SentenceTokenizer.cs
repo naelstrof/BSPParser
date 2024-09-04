@@ -52,11 +52,27 @@ public class SentenceTokenizer : Dictionary<string,string> {
     private bool TryParseString(out string str) {
         StringBuilder builder = new StringBuilder();
         bool seenQuote = false;
-        while (ptr < tokens.Length && (!char.IsWhiteSpace(tokens[ptr]) || (seenQuote && tokens[ptr] != '\n'))) {
+        bool seenParenthesis = false;
+        while (ptr < tokens.Length && (!char.IsWhiteSpace(tokens[ptr]) || (seenQuote && tokens[ptr] != '\n') || (seenParenthesis && tokens[ptr] != '\n'))) {
             if (tokens[ptr] == '"' && ptr != 0 && tokens[ptr - 1] != '\\') {
                 seenQuote = !seenQuote;
             }
-            builder.Append(tokens[ptr++]);
+
+            if (tokens[ptr] == '(') {
+                seenParenthesis = true;
+            }
+            
+            if (tokens[ptr] == ')') {
+                seenParenthesis = false;
+                ptr++;
+                continue;
+            }
+
+            if (!seenParenthesis) {
+                builder.Append(tokens[ptr++]);
+            } else {
+                ptr++;
+            }
         }
         
         ptr++;

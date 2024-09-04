@@ -60,7 +60,16 @@ public class BSPResources : Dictionary<string,BSPResource> {
     
     public void AddSound(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = $"sound/{ent[key].TrimStart(['+','!'])}";
+            // Not a sound, we're a sentence!
+            if (ent[key].StartsWith('!')) {
+                continue;
+            }
+
+            // built-in sound
+            if (int.TryParse(ent[key], out var number) && number is >= 0 and <= 16) {
+                continue;
+            }
+            var path = $"sound/{ent[key].TrimStart(['+','#'])}";
             if (string.IsNullOrEmpty(Path.GetExtension(path))) {
                 var findSound = FindFileWithoutExtension(path);
                 if (findSound != null) {

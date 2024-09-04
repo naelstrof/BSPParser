@@ -31,7 +31,7 @@ foreach (var file in mapDirectory.GetFiles()) {
     bsp.FixMalformedResources();
     
     foreach (var missingResource in generated_resources.Where((a) => !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\tMissing: {missingResource.Key}");
+        Console.WriteLine($"\tMissing from disk: {missingResource.Value}");
         generated_resources.Remove(missingResource.Key);
     }
     
