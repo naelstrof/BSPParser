@@ -275,7 +275,7 @@ public class BSP {
                             continue;
                         }
 
-                        var sound = pair.Value.Trim('.');
+                        var sound = pair.Value.Trim(['.',',']);
                         if (sound == "null") {
                             continue;
                         }
