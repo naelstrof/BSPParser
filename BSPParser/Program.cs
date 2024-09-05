@@ -14,8 +14,14 @@ if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory)
     SentenceTokenizer tokenizer = new SentenceTokenizer(File.ReadAllText(args[1]));
     List<string> filesToFix = new List<string>();
     foreach (var pair in tokenizer) {
-        filesToFix.Add(Path.Combine(addonDirectory.FullName, pair.Value));
-        Console.WriteLine(Path.Combine(addonDirectory.FullName, pair.Value));
+        if (pair.Value.EndsWith('/')) {
+            continue;
+        }
+
+        var filePath = pair.Value;
+        filePath = filePath.Trim([',', '.']);
+        filesToFix.Add(Path.Combine(addonDirectory.FullName, filePath));
+        Console.WriteLine(Path.Combine(addonDirectory.FullName, filePath));
     }
     //CaseSensitivityTools.FixMalformedCasing(filesToFix);
     return;
