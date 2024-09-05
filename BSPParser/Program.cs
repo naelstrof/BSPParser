@@ -9,7 +9,7 @@ if (!addonDirectory.Exists) {
     throw new Exception($"Can't read directory {args[0]}. Please input directory of freshly unzipped, isolated addon to sven coop. eg: ./mycoolmappack (which contains maps/ models/ etc)");
 }
 
-if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory) == 0 && args[0].EndsWith(".txt")) {
+if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory) == 0 && args[1].EndsWith(".txt")) {
     Console.WriteLine($"Attempting to repair filenames of provided sentence file, in directory {addonDirectory.Name}.");
     SentenceTokenizer tokenizer = new SentenceTokenizer(File.ReadAllText(args[1]));
     List<string> filesToFix = new List<string>();
