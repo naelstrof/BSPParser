@@ -121,6 +121,10 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     public void Save(string filepath) {
+        if (Count == 0 && File.Exists(filepath)) {
+            File.Delete(filepath);
+            return;
+        }
         StringBuilder builder = new StringBuilder();
         foreach (var pair in this) {
             builder.Append($"{pair.Key}\r\n");
