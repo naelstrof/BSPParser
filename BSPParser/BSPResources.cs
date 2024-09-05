@@ -121,8 +121,10 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     public void Save(string filepath) {
-        if (Count == 0 && File.Exists(filepath)) {
-            File.Delete(filepath);
+        if (Count == 0 ) {
+            if (File.Exists(filepath)) {
+                File.Delete(filepath);
+            }
             return;
         }
         StringBuilder builder = new StringBuilder();
