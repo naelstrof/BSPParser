@@ -19,7 +19,10 @@ if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory)
         }
 
         var filePath = pair.Value;
-        filePath = filePath.Trim([',', '.']);
+        filePath = "sound/"+filePath.Trim([',', '.']);
+        if (!filePath.EndsWith(".wav")) {
+            filePath = filePath + ".wav";
+        }
         filesToFix.Add(Path.Combine(addonDirectory.FullName, filePath));
         Console.WriteLine(Path.Combine(addonDirectory.FullName, filePath));
     }
