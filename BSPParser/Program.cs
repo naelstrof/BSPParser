@@ -1,11 +1,24 @@
 ﻿using BSPParser;
 
+
 if (args.Length == 0 || string.IsNullOrEmpty(args[0])) {
     throw new Exception($"Please input directory of freshly unzipped, isolated addon to sven coop. eg: ./mycoolmappack (which contains maps/ models/ etc)");
 }
 DirectoryInfo addonDirectory = new DirectoryInfo(args[0]);
 if (!addonDirectory.Exists) {
     throw new Exception($"Can't read directory {args[0]}. Please input directory of freshly unzipped, isolated addon to sven coop. eg: ./mycoolmappack (which contains maps/ models/ etc)");
+}
+
+if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory) == 0 && args[0].EndsWith(".txt")) {
+    Console.WriteLine($"Attempting to repair filenames of provided sentence file, in directory {addonDirectory.Name}.");
+    SentenceTokenizer tokenizer = new SentenceTokenizer(File.ReadAllText(args[1]));
+    List<string> filesToFix = new List<string>();
+    foreach (var pair in tokenizer) {
+        filesToFix.Add(Path.Combine(addonDirectory.FullName, pair.Value));
+        Console.WriteLine(Path.Combine(addonDirectory.FullName, pair.Value));
+    }
+    //CaseSensitivityTools.FixMalformedCasing(filesToFix);
+    return;
 }
 
 if (Directory.Exists(Path.Combine(addonDirectory.Parent?.FullName ?? throw new InvalidOperationException("Don't run this on a root directory please, or maybe I don't have enough permission to see up a dir?"), "svencoop"))) {

@@ -338,60 +338,15 @@ public class BSP {
     public BSPResources GetResourceFile() {
         return new BSPResources(GetResourceFilePath(), this);
     }
-    public BSPResources GetMalformedResources() {
-        var original_resources = GetResourceFile();
-        // we assume the BSP has the correct casing.
-        var assetsForgottenToBeIncluded = GetResources().Where((a) => !original_resources.ContainsKey(a.Key));
-        var malformed_resources = new BSPResources(this);
-        foreach (var check in assetsForgottenToBeIncluded) {
-            var fileName = Path.GetFileName(check.Key);
-            var directory = Path.GetDirectoryName(check.Key);
-            if (directory == null) {
-                continue;
-            }
-            var directoryInfo = new DirectoryInfo(Path.Combine(GetAddonDirectory().FullName, directory));
-            if (!directoryInfo.Exists) {
-                continue;
-            }
-            foreach (var file in directoryInfo.GetFiles()) {
-                if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
-                    malformed_resources.TryAdd(check.Key, check.Value);
-                }
-            }
-        }
-        return malformed_resources;
-    }
-    
-    private static bool FileExistsCaseSensitive(string filename) {
-        string? name = Path.GetDirectoryName(filename);
-        return name != null && Array.Exists(Directory.GetFiles(name), s => s == Path.GetFullPath(filename));
-    }
-    
     public void FixMalformedResources() {
-        var original_resources = GetResourceFile();
+        var originalResources = GetResourceFile();
         // we assume the BSP has the correct casing.
-        var assetsForgottenToBeIncluded = GetResources().Where((a) => !original_resources.ContainsKey(a.Key));
+        var assetsForgottenToBeIncluded = GetResources().Where((a) => !originalResources.ContainsKey(a.Key));
+        List<string> paths = new List<string>();
         foreach (var check in assetsForgottenToBeIncluded) {
-            var fileName = Path.GetFileName(check.Key);
-            var directory = Path.GetDirectoryName(check.Key);
-            if (directory == null) {
-                continue;
-            }
-            var directoryInfo = new DirectoryInfo(Path.Combine(GetAddonDirectory().FullName, directory));
-            if (!directoryInfo.Exists) {
-                continue;
-            }
-            // We hit something, even if it might be the wrong thing, there's no way to know....
-            if (FileExistsCaseSensitive(Path.Combine(directoryInfo.FullName,fileName))) {
-                continue;
-            }
-            foreach (var file in directoryInfo.GetFiles()) {
-                if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
-                    Console.WriteLine($"Renaming {file.FullName} to {Path.Combine(directoryInfo.FullName, fileName)}");
-                    File.Move(file.FullName, Path.Combine(directoryInfo.FullName, fileName));
-                }
-            }
+            paths.Add(Path.Combine(GetAddonDirectory().FullName, check.Key));
         }
+        CaseSensitivityTools.FixMalformedCasing(paths);
     }
     public override string ToString() {
         return Path.GetFileName(filepath);
