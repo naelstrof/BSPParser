@@ -12,7 +12,7 @@ if (!addonDirectory.Exists) {
 if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory) == 0 && args[1].EndsWith(".txt")) {
     Console.WriteLine($"Attempting to repair filenames of provided sentence file, in directory {addonDirectory.Name}.");
     SentenceTokenizer tokenizer = new SentenceTokenizer(File.ReadAllText(args[1]));
-    List<string> filesToFix = new List<string>();
+    HashSet<string> filesToFix = new HashSet<string>();
     foreach (var pair in tokenizer) {
         if (pair.Value.EndsWith('/')) {
             continue;
@@ -21,12 +21,11 @@ if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory)
         var filePath = pair.Value;
         filePath = "sound/"+filePath.Trim([',', '.']);
         if (!filePath.EndsWith(".wav")) {
-            filePath = filePath + ".wav";
+            filePath += ".wav";
         }
         filesToFix.Add(Path.Combine(addonDirectory.FullName, filePath));
-        Console.WriteLine(Path.Combine(addonDirectory.FullName, filePath));
     }
-    //CaseSensitivityTools.FixMalformedCasing(filesToFix);
+    CaseSensitivityTools.FixMalformedCasing(filesToFix);
     return;
 }
 
