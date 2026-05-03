@@ -1,0 +1,51 @@
+name: CI-CD
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0
+
+      - name: Linux Build
+        shell: pwsh
+        id: linux
+        run: |
+          dotnet publish BSPParser/BSPParser.csproj -o Build/Linux -p:PublishSingleFile=true -c Release -r linux-x64 -v q
+          Compress-Archive `
+            -Path Build/Linux/* `
+            -DestinationPath Linux.zip
+
+      - name: Windows Build
+        shell: pwsh
+        id: windows
+        run: |
+          dotnet publish BSPParser/BSPParser.csproj -o Build/Windows -p:PublishSingleFile=true -c Release -r win-x64 -v q
+          Compress-Archive `
+            -Path Build/Windows/* `
+            -DestinationPath Windows.zip
+
+      - name: Publish Release
+        if: ${{ success() && steps.linux.outcome == 'success' && steps.windows.outcome == 'success' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            Windows.zip
+            Linux.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

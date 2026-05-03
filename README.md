@@ -22,15 +22,9 @@ After running it on the [Hazardous Course 2](http://scmapdb.wikidot.com/map:haza
 
 ![maps/hc2_b2b](https://github.com/user-attachments/assets/260bcd21-f62d-44d4-8688-aafe5d93417a)
 
-## Compiling
-
-```bash
-#!/bin/bash
-
-dotnet build ./BSPParser/ --configuration Release
-```
-
 ## Usage
+
+This program requires [.NET Runtime](https://dotnet.microsoft.com/download) 8.0 or greater.
 
 Lets say I wanted to install the [Wanted campaign](http://scmapdb.wikidot.com/map:wanted) from the sven coop map database. And I've extracted it to my Downloads directory, I could run BSPParser to touch up the .res files.
 ```bash
