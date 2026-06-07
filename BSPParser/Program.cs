@@ -1,4 +1,5 @@
-﻿using BSPParser;
+﻿using System.Diagnostics;
+using BSPParser;
 
 
 if (args.Length == 0 || string.IsNullOrEmpty(args[0])) {
@@ -49,25 +50,21 @@ foreach (var file in mapDirectory.GetFiles()) {
     BSPResources generated_resources = bsp.GetResources();
     BSPResources original_resources = bsp.GetResourceFile();
     
-    bsp.FixMalformedResources();
-    
-    foreach (var missingResource in generated_resources.Where((a) => !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\tMissing from disk: {missingResource.Value}");
-        generated_resources.Remove(missingResource.Key);
-    }
-    
-    // Assets that we missed, possibly referred to by script, or erroneously included by the user. Impossible to differentiate. So we add them all.
-    foreach (var resource in original_resources.Where((a) =>
-                 !generated_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
+    // Assets that we missed, possibly referred to by script, or erroneously included by the map creator. Impossible to differentiate. So we add them all.
+    foreach (var resource in original_resources.Where((a) => !generated_resources.ContainsKeyCaseInsensitive(a.Key))) {
         generated_resources.TryAdd(resource.Key, resource.Value);
     }
     
+    generated_resources.FixMalformedResources(bsp.GetAddonDirectory());
+    
+    foreach (var missingResource in generated_resources.Where((a) => !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
+        Console.WriteLine($"\tRemoving due to missing from disk: {missingResource.Value}");
+        generated_resources.Remove(missingResource.Key);
+    }
+    
     foreach (var resource in generated_resources.Where((a) => !original_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\tAdding: {resource.Value}");
+        Console.WriteLine($"\tAdding due to exists in BSP ent: {resource.Value}");
     }
-
-    foreach (var resource in original_resources.Where((a) => !generated_resources.ContainsKey(a.Key) && !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\tRemoving: {resource.Value}");
-    }
+    
     generated_resources.Save(bsp.GetResourceFilePath());
 }

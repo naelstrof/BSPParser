@@ -338,16 +338,6 @@ public class BSP {
     public BSPResources GetResourceFile() {
         return new BSPResources(GetResourceFilePath(), this);
     }
-    public void FixMalformedResources() {
-        var originalResources = GetResourceFile();
-        // we assume the BSP has the correct casing.
-        var assetsForgottenToBeIncluded = GetResources().Where((a) => !originalResources.ContainsKey(a.Key));
-        List<string> paths = new List<string>();
-        foreach (var check in assetsForgottenToBeIncluded) {
-            paths.Add(Path.Combine(GetAddonDirectory().FullName, check.Key));
-        }
-        CaseSensitivityTools.FixMalformedCasing(paths);
-    }
     public override string ToString() {
         return Path.GetFileName(filepath);
     }

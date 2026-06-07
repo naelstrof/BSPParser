@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 
 namespace BSPParser;
@@ -14,7 +15,20 @@ public class BSPResources : Dictionary<string,BSPResource> {
         }
         var filesource = new BSPResourceFileSource(resourcesFilePath);
         foreach (var line in File.ReadLines(resourcesFilePath)) {
-            TryAdd(line.Trim(), new BSPResource(line.Trim(),filesource));
+            var trimmed = line.Trim();
+            var filename = Path.GetFileName(trimmed);
+            var filepath = Path.GetDirectoryName(trimmed) ?? string.Empty;
+            // Sven coop automatically infers the existence of p_, v_, w_ variants of models, so we have to add them all in case the user only included one of them.
+            if (filename.StartsWith("p_") || filename.StartsWith("v_") || filename.StartsWith("w_")) {
+                var playermodel = Path.Combine(filepath, "p"+filename[1..]);
+                var viewmodel = Path.Combine(filepath, "v"+filename[1..]);
+                var worldmodel = Path.Combine(filepath, "w"+filename[1..]);
+                TryAdd(playermodel, new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+                TryAdd(viewmodel, new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+                TryAdd(worldmodel, new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+            } else {
+                TryAdd(line.Trim(), new BSPResource(line.Trim(), filesource));
+            }
         }
         Clean();
     }
@@ -40,7 +54,19 @@ public class BSPResources : Dictionary<string,BSPResource> {
                     path += ".mdl";
                 }
             }
-            TryAdd(path, new BSPResource(path,new BSPResourceEntitySource(ent)));
+
+            var filename = Path.GetFileName(path);
+            var filepath = Path.GetDirectoryName(path) ?? string.Empty;
+            if (filename.StartsWith("p_") || filename.StartsWith("v_") || filename.StartsWith("w_")) {
+                var playermodel = Path.Combine(filepath, "p" + filename[1..]);
+                var viewmodel = Path.Combine(filepath, "v" + filename[1..]);
+                var worldmodel = Path.Combine(filepath, "w" + filename[1..]);
+                TryAdd(playermodel, new BSPResource(playermodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+                TryAdd(viewmodel, new BSPResource(viewmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+                TryAdd(worldmodel, new BSPResource(worldmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+            } else {
+                TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
+            }
         }
     }
 
@@ -120,6 +146,23 @@ public class BSPResources : Dictionary<string,BSPResource> {
         }
     }
 
+    public bool ContainsKeyCaseInsensitive(string key) {
+        foreach (var otherKey in Keys) {
+            if (string.Equals(otherKey, key, StringComparison.InvariantCultureIgnoreCase)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public void FixMalformedResources(DirectoryInfo addonDirectory) {
+        List<string> paths = new List<string>();
+        foreach (var key in Keys) {
+            paths.Add(Path.Combine(addonDirectory.FullName, key));
+        }
+        CaseSensitivityTools.FixMalformedCasing(paths);
+    }
+
     public void Save(string filepath) {
         if (Count == 0 ) {
             if (File.Exists(filepath)) {
@@ -127,12 +170,14 @@ public class BSPResources : Dictionary<string,BSPResource> {
             }
             return;
         }
+        File.WriteAllText(filepath, ToString());
+    }
+
+    public override string ToString() {
         StringBuilder builder = new StringBuilder();
         foreach (var pair in this) {
             builder.Append($"{pair.Key}\r\n");
         }
-
-        File.WriteAllText(filepath, builder.ToString());
+        return builder.ToString();
     }
-
 }
