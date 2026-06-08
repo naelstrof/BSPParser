@@ -35,21 +35,33 @@ public class BSPChangeLevelTree {
     }
     
     public string GetMapCycleString() {
-        StringBuilder builder = new StringBuilder();
+        List<string> maps = new List<string>();
         foreach (var node in nodes) {
             if (node.IsRootLevel()) {
-                builder.AppendLine(node.GetMapName());
+                maps.Add(node.GetMapName());
             }
+        }
+        
+        maps.Sort(StringComparer.CurrentCultureIgnoreCase);
+        StringBuilder builder = new StringBuilder();
+        foreach (var map in maps) {
+            builder.AppendLine(map);
         }
         return builder.ToString();
     }
     
     public string GetMapVoteString() {
-        StringBuilder builder = new StringBuilder();
+        List<string> maps = new List<string>();
         foreach (var node in nodes) {
             if (node.IsRootLevel()) {
-                builder.AppendLine($"addvotemap {node.GetMapName()}");
+                maps.Add(node.GetMapName());
             }
+        }
+        
+        maps.Sort(StringComparer.CurrentCultureIgnoreCase);
+        StringBuilder builder = new StringBuilder();
+        foreach (var map in maps) {
+            builder.AppendLine($"addvotemap {map}");
         }
         return builder.ToString();
     }
