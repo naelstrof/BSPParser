@@ -77,6 +77,27 @@ public class BSPChangeLevelNode {
     public bool IsRootLevel() {
         return parents.Count == 0 && bspFile.Exists;
     }
+
+    public bool TryGetFileInfo(BSP bsp, string exitName, [NotNullWhen(true)] out FileInfo? fileInfo) {
+        var svenGameDirectory = bsp.GetAddonDirectory().Parent;
+        if (svenGameDirectory == null) {
+            throw new FileNotFoundException($"Cannot find game directory... Trying to check the parent of folder {bsp.GetAddonDirectory()} and failing somehow!");
+        }
+        var svenCoopDirectory = Path.Combine(svenGameDirectory.FullName, "svencoop");
+        var svenCoopAddonDirectory = Path.Combine(svenGameDirectory.FullName, "svencoop_addon");
+        var gameInfo = new FileInfo(Path.Combine(svenCoopDirectory, "maps", exitName+".bsp"));
+        if (gameInfo.Exists) {
+            fileInfo = gameInfo;
+            return true;
+        }
+        var addonInfo = new FileInfo(Path.Combine(svenCoopAddonDirectory, "maps", exitName+".bsp"));
+        if (addonInfo.Exists) {
+            fileInfo = addonInfo;
+            return true;
+        }
+        fileInfo = null;
+        return false;
+    }
     
     public BSPChangeLevelNode(FileInfo map, BSPChangeLevelNode? parent, int depth, BSPChangeLevelTree tree) {
         bspFile = map;
@@ -87,14 +108,16 @@ public class BSPChangeLevelNode {
             parents.Add(parent);
         }
         if (!map.Exists) {
-            Console.Error.WriteLine($"Missing map on disk, yet found in a level change trigger: {map.FullName}");
             return;
         }
         tree.AddNode(this);
         
         var bsp = new BSP(map.FullName);
         foreach (var exit in bsp.GetMapExits()) {
-            var exitFileInfo = new FileInfo(Path.Combine(bsp.GetAddonDirectory().FullName, "maps", exit+".bsp"));
+            if (!TryGetFileInfo(bsp, exit, out var exitFileInfo)) {
+                Console.Error.WriteLine($"Missing map on disk, yet found in a level change trigger: {exit}");
+                continue;
+            }
             if (tree.TryGetNode(exitFileInfo, out var existingNode)) {
                 existingNode.parents.Add(this);
                 children.Add(existingNode);
