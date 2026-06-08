@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace BSPParser;
@@ -94,15 +93,6 @@ public class BSP {
         addonDirectory = new FileInfo(filePath).Directory?.Parent ?? throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
         TryReadStruct(stream, 0, out BSPHeader header);
         ParseEntities(stream, header);
-        if (filePath.Contains("casino_vulcano_l3")) {
-            List<string> outputLines = new List<string>();
-            foreach (var ent in entities) {
-                outputLines.Add(ent.ToString());
-            }
-            File.WriteAllLines("ents.txt", outputLines);
-            var entitiesLump = header.lump[LUMP_ENTITIES];
-            File.WriteAllText("default.txt", ReadString(stream, entitiesLump.nOffset, entitiesLump.nLength));
-        }
     }
 
     public ICollection<BSPEntity> GetEntities() => entities;
