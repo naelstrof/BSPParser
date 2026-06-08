@@ -21,7 +21,7 @@ public class BSPTokenizer(string tokens, BSP? bsp = null) : IEnumerable<BSPEntit
         }
         StringBuilder builder = new StringBuilder();
         while (ptr < tokens.Length) {
-            if (tokens[ptr] == '"' && tokens[ptr - 1] != '\\') {
+            if (tokens[ptr] == '"' && (ptr < 2 || (tokens[ptr - 1] != '\\' || tokens[ptr-2] == '\\'))) {
                 ptr++;
                 str = builder.ToString();
                 return true;
@@ -33,6 +33,7 @@ public class BSPTokenizer(string tokens, BSP? bsp = null) : IEnumerable<BSPEntit
     }
 
     private bool TryParseKeyValue(out string key, out string value) {
+
         Trim();
         if (!TryParseString(out key)) {
             value = "";

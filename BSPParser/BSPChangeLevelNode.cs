@@ -107,6 +107,12 @@ public class BSPChangeLevelNode {
             fileInfo = addonInfo;
             return true;
         }
+        // Backup, user is probably running on an arbitrary map pack for debug purposes.
+        var sameDir = new FileInfo(Path.Combine(bsp.GetAddonDirectory().FullName, "maps", exitName+".bsp"));
+        if (sameDir.Exists) {
+            fileInfo = sameDir;
+            return true;
+        }
         fileInfo = null;
         return false;
     }

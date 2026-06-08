@@ -10,9 +10,11 @@ public class BSPEntity : Dictionary<string,string> {
     }
     public override string ToString() {
         StringBuilder builder = new StringBuilder();
+        builder.Append("{\n");
         foreach (var pair in this) {
-            builder.Append($"\"{pair.Key}\" \"{pair.Value}\"\n");
+            builder.Append($"  \"{pair.Key}\" \"{pair.Value}\",\n");
         }
+        builder.Append("},\n");
         return builder.ToString();
     }
 }
