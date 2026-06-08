@@ -100,6 +100,14 @@ public class BSP {
 
     public DirectoryInfo GetAddonDirectory() => addonDirectory;
 
+    public List<string> GetMapExits() {
+        List<string> mapExits = new List<string>();
+        foreach (var ent in GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "trigger_changelevel" && ent.ContainsKey("map"))) {
+            mapExits.Add(ent["map"]);
+        }
+        return mapExits;
+    }
+
     public BSPResources GetResources() {
         var resources = new BSPResources(this);
         resources.AddSound( "ambient_generic", "message");
@@ -333,6 +341,33 @@ public class BSP {
             }
             resources.TryAdd(pair.Value, new BSPResource(pair.Value, source));
         }
+    }
+
+    public void FixResourcesInPlace() {
+        BSPResources generated_resources = GetResources();
+        BSPResources original_resources = GetResourceFile();
+
+        // Assets that we missed, possibly referred to by script, or erroneously included by the map creator. Impossible to differentiate. So we add them all.
+        foreach (var resource in
+                 original_resources.Where((a) => !generated_resources.ContainsKeyCaseInsensitive(a.Key))) {
+            generated_resources.TryAdd(resource.Key, resource.Value);
+        }
+
+        generated_resources.FixMalformedResources(GetAddonDirectory());
+
+        foreach (var missingResource in generated_resources.Where((a) =>
+                     !File.Exists(Path.Combine(GetAddonDirectory().FullName, a.Key)))) {
+            Console.WriteLine($"\tRemoving due to missing from disk: {missingResource.Value}");
+            generated_resources.Remove(missingResource.Key);
+        }
+
+        foreach (var resource in generated_resources.Where((a) =>
+                     !original_resources.ContainsKey(a.Key) &&
+                     File.Exists(Path.Combine(GetAddonDirectory().FullName, a.Key)))) {
+            Console.WriteLine($"\tAdding due to exists in BSP ent: {resource.Value}");
+        }
+
+        generated_resources.Save(GetResourceFilePath());
     }
 
     public BSPResources GetResourceFile() {

@@ -1,70 +1,99 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
 using BSPParser;
 
+IEnumerable<FileInfo> GetMaps(bool allowGameFolder, string path) {
+    DirectoryInfo addonDirectory = new DirectoryInfo(path);
+    if (!addonDirectory.Exists) {
+        throw new Exception($"Can't read directory {path}. Please input directory of freshly unzipped, isolated addon to sven coop. eg: ./mycoolmappack (which contains maps/ models/ etc)");
+    }
 
-if (args.Length == 0 || string.IsNullOrEmpty(args[0])) {
-    throw new Exception($"Please input directory of freshly unzipped, isolated addon to sven coop. eg: ./mycoolmappack (which contains maps/ models/ etc)");
-}
-DirectoryInfo addonDirectory = new DirectoryInfo(args[0]);
-if (!addonDirectory.Exists) {
-    throw new Exception($"Can't read directory {args[0]}. Please input directory of freshly unzipped, isolated addon to sven coop. eg: ./mycoolmappack (which contains maps/ models/ etc)");
-}
+    if (!allowGameFolder) {
+        if (Directory.Exists(Path.Combine( addonDirectory.Parent?.FullName ?? throw new InvalidOperationException( "Don't run this on a root directory please, or maybe I don't have enough permission to see up a dir?"), "svencoop"))) {
+            throw new Exception("Please only run this utility on uninstalled map packs. It's designed within limitations that we cannot truly build a full dependency graph.");
+        }
+    }
 
-if (args.Length == 2 && (File.GetAttributes(args[1]) & FileAttributes.Directory) == 0 && args[1].EndsWith(".txt")) {
-    Console.WriteLine($"Attempting to repair filenames of provided sentence file, in directory {addonDirectory.Name}.");
-    SentenceTokenizer tokenizer = new SentenceTokenizer(File.ReadAllText(args[1]));
-    HashSet<string> filesToFix = new HashSet<string>();
-    foreach (var pair in tokenizer) {
-        if (pair.Value.EndsWith('/')) {
+    DirectoryInfo mapDirectory = new DirectoryInfo(Path.Combine(addonDirectory.FullName, "maps"));
+    if (!mapDirectory.Exists) {
+        throw new Exception($"Found no bsp files within {mapDirectory.FullName}");
+    }
+
+    foreach (var file in mapDirectory.GetFiles()) {
+        if (!file.Name.EndsWith(".bsp")) {
             continue;
         }
+        yield return file;
+    }
+}
 
-        var filePath = pair.Value;
-        filePath = "sound/"+filePath.Trim([',', '.']);
-        if (!filePath.EndsWith(".wav")) {
-            filePath += ".wav";
+if (args.Length > 0) {
+    foreach (var arg in args) {
+        if (arg == "-h" || arg == "--help" || arg == "/?") {
+            Console.WriteLine("""
+                              BSPParser
+
+                              This application will scan a downloaded map pack and fix it up for linux servers for deployment.
+                              
+                              
+                              As a deployment post-process on downloaded maps, to correct res files to work on a linux server:
+                              Warning, this will overwrite files in the provided folder, it will rename and update res files to match descriptions in the provided within the BSP.
+                              Usage:  
+                                  BSPParser <directory of unzipped addon's svencoop_addon folder (the one containing the folders maps, sound, models, etc)>
+                              Example:
+                                  BSPParser "~/Downloads/D E A T H - W I S H/svencoop_addon/"
+                              
+                              
+                              As a mapcycle list generator, to create a linux-compatible map list that only contains the starts of campaigns with correct casing:
+                              Usage:
+                                  BSPParser --cycle <svencoop_addon directory>
+                              Example:
+                                  BSPParser --cycle "~/Sven Coop/svencoop_addon/" > mapcycle.txt
+                                  
+                              As a mapvote list generator, to create a linux-compatible map list that only contains the starts of campaigns with correct casing:
+                              Usage:
+                                  BSPParser --vote <svencoop_addon directory>
+                              Example:
+                                  BSPParser --vote "~/Sven Coop/svencoop_addon/" > mapvote.cfg
+                              
+                              """);
+            return;
         }
-        filesToFix.Add(Path.Combine(addonDirectory.FullName, filePath));
     }
-    CaseSensitivityTools.FixMalformedCasing(filesToFix);
-    return;
 }
 
-if (Directory.Exists(Path.Combine(addonDirectory.Parent?.FullName ?? throw new InvalidOperationException("Don't run this on a root directory please, or maybe I don't have enough permission to see up a dir?"), "svencoop"))) {
-    throw new Exception("Please only run this utility on uninstalled map packs. It's designed within limitations that we cannot truely build a full dependency graph.");
+// Generate map cycle for existing maps
+if (args.Length == 2) {
+    bool foundCycleFlag = false;
+    bool foundVoteFlag = false;
+    var path = "";
+    foreach (var arg in args) {
+        if (arg == "-c" || arg == "--cycle") {
+            foundCycleFlag = true;
+        } else if (arg == "--vote") {
+            foundVoteFlag = true;
+        } else {
+            path = arg;
+        }
+    }
+    if ((!foundCycleFlag && !foundVoteFlag) || (foundCycleFlag && foundVoteFlag)) {
+        throw new Exception("Invalid number of arguments, use -h or --help for help.");
+    }
+    BSPChangeLevelTree changeLevelTree = new BSPChangeLevelTree(GetMaps(true, path));
+    if (foundCycleFlag) {
+        Console.WriteLine(changeLevelTree.GetMapCycleString());
+    } else if (foundVoteFlag) {
+        Console.WriteLine(changeLevelTree.GetMapVoteString());
+    } else {
+        throw new Exception("Invalid number of arguments, use -h or --help for help.");
+    }
 }
 
-DirectoryInfo mapDirectory = new DirectoryInfo(Path.Combine(addonDirectory.FullName, "maps"));
-if (!mapDirectory.Exists) {
-    throw new Exception($"Found no bsp files within {mapDirectory.FullName}");
-}
 
-foreach (var file in mapDirectory.GetFiles()) {
-    if (!file.Name.EndsWith(".bsp")) {
-        continue;
+// Scary in-place fixup of random map downloaded from sven coop map database
+if (args.Length == 1) {
+    foreach (var map in GetMaps(false, args[0])) {
+        Console.WriteLine($"{map.Name}:");
+        BSP bsp = new BSP(map.FullName);
+        bsp.FixResourcesInPlace();
     }
-
-    Console.WriteLine($"{file.Name}:");
-    BSP bsp = new BSP(file.FullName);
-
-    BSPResources generated_resources = bsp.GetResources();
-    BSPResources original_resources = bsp.GetResourceFile();
-    
-    // Assets that we missed, possibly referred to by script, or erroneously included by the map creator. Impossible to differentiate. So we add them all.
-    foreach (var resource in original_resources.Where((a) => !generated_resources.ContainsKeyCaseInsensitive(a.Key))) {
-        generated_resources.TryAdd(resource.Key, resource.Value);
-    }
-    
-    generated_resources.FixMalformedResources(bsp.GetAddonDirectory());
-    
-    foreach (var missingResource in generated_resources.Where((a) => !File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\tRemoving due to missing from disk: {missingResource.Value}");
-        generated_resources.Remove(missingResource.Key);
-    }
-    
-    foreach (var resource in generated_resources.Where((a) => !original_resources.ContainsKey(a.Key) && File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName, a.Key)))) {
-        Console.WriteLine($"\tAdding due to exists in BSP ent: {resource.Value}");
-    }
-    
-    generated_resources.Save(bsp.GetResourceFilePath());
 }
