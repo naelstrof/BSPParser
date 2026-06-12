@@ -41,14 +41,67 @@ public class AngelScriptTokenizer(string tokens) {
         return TryParseString(out include);
     }
 
-    private bool TryParseString(out string str) {
-        if (ptr >= tokens.Length || tokens[ptr++] != '"') {
+    private bool TryParseMultiLineString(out string str) {
+        if (ptr >= tokens.Length) {
             str = "";
             return false;
         }
+        
+        char delimiter = tokens[ptr];
+        switch (delimiter) {
+            case '\'':
+            case '"':
+                break;
+            default:
+                str = "";
+                return false;
+        }
+
+        int save = ptr;
+        if (ptr >= tokens.Length-3 || tokens[ptr] != delimiter || tokens[ptr + 1] != delimiter || tokens[ptr + 2] != delimiter) {
+            str = "";
+            return false;
+        }
+        ptr += 3;
+        StringBuilder builder = new StringBuilder();
+        while (ptr < tokens.Length - 3) {
+            if (ptr < tokens.Length-3 && tokens[ptr] == delimiter && tokens[ptr + 1] == delimiter && tokens[ptr + 2] == delimiter) {
+                ptr += 3;
+                str = builder.ToString();
+                return true;
+            }
+            builder.Append(tokens[ptr++]);
+        }
+
+        ptr = save;
+        str = "";
+        return false;
+    }
+
+    private bool TryParseString(out string str) {
+        if (ptr >= tokens.Length) {
+            str = "";
+            return false;
+        }
+
+        if (TryParseMultiLineString(out str)) {
+            return true;
+        }
+        
+        char delimiter = tokens[ptr];
+        switch (delimiter) {
+            case '\'':
+            case '"':
+                ptr++;
+                break;
+            default:
+                str = "";
+                return false;
+        }
+        
         StringBuilder builder = new StringBuilder();
         while (ptr < tokens.Length) {
-            if (tokens[ptr] == '"' && (ptr < 2 || (tokens[ptr - 1] != '\\' || tokens[ptr-2] == '\\'))) {
+            if (tokens[ptr] == delimiter && (ptr < 2 || (tokens[ptr - 1] != '\\' || tokens[ptr-2] == '\\'))) {
                 ptr++;
                 str = builder.ToString();
                 return true;

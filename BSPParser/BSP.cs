@@ -136,6 +136,24 @@ public class BSP {
         return false;
     }
 
+    private void HandleWeaponName(BSPResources resources, string weaponName, HashSet<string> allFiles, IResourceSource source) {
+        if (TryMatchEntityToWeaponSpriteText(weaponName, allFiles, out var weaponSpriteTextPath)) {
+            resources.TryAdd(weaponSpriteTextPath, new BSPResource(weaponSpriteTextPath, source));
+            var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, weaponSpriteTextPath)));
+            foreach (var sprite in weaponHudTokenizer.GetAllSprites()) {
+                var testSprite = sprite.TrimStart('/');
+                if (!testSprite.StartsWith("sprites/")) {
+                    testSprite = "sprites/" + testSprite;
+                }
+
+                if (!testSprite.EndsWith(".spr")) {
+                    testSprite += ".spr";
+                }
+                resources.TryAdd($"{testSprite}", new BSPResource($"{testSprite}", new BSPResourceFileSource($"From weapon ent found in bsp, implied weapon sprite text.. {weaponSpriteTextPath}")));
+            }
+        }
+    }
+
     private BSPResources GetResources(HashSet<string> allFiles) {
         var resources = new BSPResources(this);
         resources.AddSound( "ambient_generic", "message");
@@ -147,22 +165,16 @@ public class BSP {
         resources.AddSound( "weapon_custom_bullet", "windup_snd");
         resources.AddSound( "weapon_custom_bullet", "wind_down_snd");
         
+        foreach (var squadmakerThatMakesWeapons in entities.Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "squadmaker" && ent.ContainsKey("monstertype") && ent["monstertype"].StartsWith("weapon_"))) {
+            HandleWeaponName(resources, squadmakerThatMakesWeapons["monstertype"], allFiles, new BSPResourceEntitySource(squadmakerThatMakesWeapons));
+        }
+        
+        foreach (var createEntityThatMakesWeapons in entities.Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "trigger_createentity" && ent.ContainsKey("m_iszCrtEntChildClass") && ent["m_iszCrtEntChildClass"].StartsWith("weapon_"))) {
+            HandleWeaponName(resources, createEntityThatMakesWeapons["m_iszCrtEntChildClass"], allFiles, new BSPResourceEntitySource(createEntityThatMakesWeapons));
+        }
+        
         foreach (var weapon in entities.Where((ent) => ent.ContainsKey("classname") && ent["classname"].StartsWith("weapon_"))) {
-            if (TryMatchEntityToWeaponSpriteText(weapon["classname"], allFiles, out var weaponSpriteTextPath)) {
-                resources.TryAdd(weaponSpriteTextPath, new BSPResource(weaponSpriteTextPath, new BSPResourceEntitySource(weapon)));
-                var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, weaponSpriteTextPath)));
-                foreach (var sprite in weaponHudTokenizer.GetAllSprites()) {
-                    var testSprite = sprite.TrimStart('/');
-                    if (!testSprite.StartsWith("sprites/")) {
-                        testSprite = "sprites/" + testSprite;
-                    }
-
-                    if (!testSprite.EndsWith(".spr")) {
-                        testSprite += ".spr";
-                    }
-                    resources.TryAdd($"{testSprite}", new BSPResource($"{testSprite}", new BSPResourceFileSource($"From weapon ent found in bsp, implied weapon sprite text.. {weaponSpriteTextPath}")));
-                }
-            }
+            HandleWeaponName(resources, weapon["classname"], allFiles, new BSPResourceEntitySource(weapon));
             
             if (weapon.TryGetValue("wpn_p_model", out var pmodel) && !pmodel.StartsWith("*")) {
                 resources.TryAdd(pmodel, new BSPResource(pmodel, new BSPResourceEntitySource(weapon)));
@@ -283,21 +295,7 @@ public class BSP {
             var config = new SvenConfigTokenizer(File.ReadAllText(GetConfigFilePath()));
             foreach (var pair in config) {
                 if (pair.Key.StartsWith("weapon_")) {
-                    if (TryMatchEntityToWeaponSpriteText(pair.Key, allFiles, out var weaponSpriteTextPath)) {
-                        resources.TryAdd(weaponSpriteTextPath, new BSPResource(weaponSpriteTextPath, new BSPResourceFileSource(GetConfigFilePath())));
-                        var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, weaponSpriteTextPath)));
-                        foreach (var sprite in weaponHudTokenizer.GetAllSprites()) {
-                            var testSprite = sprite.TrimStart('/');
-                            if (!testSprite.StartsWith("sprites/")) {
-                                testSprite = "sprites/" + testSprite;
-                            }
-
-                            if (!testSprite.EndsWith(".spr")) {
-                                testSprite += ".spr";
-                            }
-                            resources.TryAdd($"{testSprite}", new BSPResource($"{testSprite}", new BSPResourceFileSource($"From weapon ent found in bsp, implied weapon sprite text.. {weaponSpriteTextPath}")));
-                        }
-                    }
+                    HandleWeaponName(resources, pair.Key, allFiles, new BSPResourceFileSource(GetConfigFilePath()));
                 }
             }
             if (config.TryGetValue("globalmodellist", out var modelReplacementFilePath)) {

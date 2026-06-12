@@ -43,7 +43,10 @@ public class BSPResources : Dictionary<string,BSPResource> {
     
     public void AddModel(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = ent[key];
+            var path = ent[key].Trim();
+            if (string.IsNullOrEmpty(path)) {
+                continue;
+            }
             if (ent[key].StartsWith("*")) {
                 continue;
             }
@@ -87,16 +90,20 @@ public class BSPResources : Dictionary<string,BSPResource> {
     
     public void AddSound(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
+            var sound = ent[key].Trim();
+            if (string.IsNullOrEmpty(sound)) {
+                continue;
+            }
             // Not a sound, we're a sentence!
-            if (ent[key].StartsWith('!')) {
+            if (sound.StartsWith('!')) {
                 continue;
             }
 
             // built-in sound
-            if (int.TryParse(ent[key], out var number) && number is >= 0 and <= 16) {
+            if (int.TryParse(sound, out var number) && number is >= 0 and <= 16) {
                 continue;
             }
-            var path = $"sound/{ent[key].TrimStart(['+','#'])}";
+            var path = $"sound/{sound.TrimStart(['+','#'])}";
             if (string.IsNullOrEmpty(Path.GetExtension(path))) {
                 var findSound = FindFileWithoutExtension(path);
                 if (findSound != null) {
@@ -110,7 +117,10 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     public void AddSprite(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = ent[key].TrimStart('/');
+            var path = ent[key].TrimStart('/').Trim();
+            if (string.IsNullOrEmpty(path)) {
+                continue;
+            }
             if (string.IsNullOrEmpty(Path.GetExtension(path))) {
                 var findSprite = FindFileWithoutExtension(path);
                 if (findSprite != null) {
