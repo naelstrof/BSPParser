@@ -110,7 +110,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     public void AddSprite(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = ent[key];
+            var path = ent[key].TrimStart('/');
             if (string.IsNullOrEmpty(Path.GetExtension(path))) {
                 var findSprite = FindFileWithoutExtension(path);
                 if (findSprite != null) {
@@ -118,6 +118,9 @@ public class BSPResources : Dictionary<string,BSPResource> {
                 } else {
                     path += ".spr";
                 }
+            }
+            if (!path.StartsWith("sprites/")) {
+                path = "sprites/" + path;
             }
             TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
         }

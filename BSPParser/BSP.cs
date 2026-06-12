@@ -340,20 +340,25 @@ public class BSP {
         }
         var strings = new HashSet<string>(tokenizer.GetAllStrings());
         foreach (var str in strings) {
-            if (str.EndsWith(".wav") || str.EndsWith(".ogg") || str.EndsWith("mp3")) {
-                resources.TryAdd($"sound/{str}",  new BSPResource($"sound/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
-            } else if (str.EndsWith(".mdl")) {
-                resources.TryAdd(str,  new BSPResource(str, new BSPResourceFileSource($"AngelScript: {scriptPath}")));
-            } else if (str.EndsWith(".spr")) {
-                if (!str.StartsWith("sprites/")) {
-                    resources.TryAdd($"sprites/{str}",  new BSPResource($"sprites/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            var testString = str.TrimStart('/');
+            if (testString.EndsWith(".wav") || testString.EndsWith(".ogg") || testString.EndsWith("mp3")) {
+                if (!testString.StartsWith("sound/")) {
+                    resources.TryAdd($"sound/{testString}",  new BSPResource($"sound/{testString}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
                 } else {
-                    resources.TryAdd($"{str}", new BSPResource($"{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+                    resources.TryAdd($"{testString}", new BSPResource($"{testString}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
                 }
-            } else if (str.EndsWith(".tga") || str.EndsWith(".bmp")) {
-                resources.TryAdd($"gfx/env/{str}",  new BSPResource($"gfx/env/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            } else if (testString.EndsWith(".mdl")) {
+                resources.TryAdd(testString,  new BSPResource(testString, new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            } else if (testString.EndsWith(".spr")) {
+                if (!testString.StartsWith("sprites/")) {
+                    resources.TryAdd($"sprites/{testString}",  new BSPResource($"sprites/{testString}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+                } else {
+                    resources.TryAdd($"{testString}", new BSPResource($"{testString}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+                }
+            } else if (testString.EndsWith(".tga") || testString.EndsWith(".bmp")) {
+                resources.TryAdd($"gfx/env/{testString}",  new BSPResource($"gfx/env/{testString}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
             } else {
-                if (TryFindFileWithoutExtension(str, out var realFile)) {
+                if (TryFindFileWithoutExtension(testString, out var realFile)) {
                     var relativePath = Path.GetRelativePath(addonDirectory.FullName, realFile.FullName);
                     resources.TryAdd(relativePath, new BSPResource(relativePath, new BSPResourceFileSource($"AngelScript: {scriptPath} (guessing)")));
                 }
