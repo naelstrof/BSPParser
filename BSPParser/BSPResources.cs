@@ -24,9 +24,9 @@ public class BSPResources : Dictionary<string,BSPResource> {
                 var playermodel = Path.Combine(filepath, "p"+filename[1..]);
                 var viewmodel = Path.Combine(filepath, "v"+filename[1..]);
                 var worldmodel = Path.Combine(filepath, "w"+filename[1..]);
-                TryAdd(playermodel, new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
-                TryAdd(viewmodel, new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
-                TryAdd(worldmodel, new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+                TryAdd(playermodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+                TryAdd(viewmodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+                TryAdd(worldmodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
             } else {
                 TryAdd(line.Trim(), new BSPResource(line.Trim(), filesource));
             }
@@ -62,11 +62,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
                 var playermodel = Path.Combine(filepath, "p" + filename[1..]);
                 var viewmodel = Path.Combine(filepath, "v" + filename[1..]);
                 var worldmodel = Path.Combine(filepath, "w" + filename[1..]);
-                TryAdd(playermodel, new BSPResource(playermodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
-                TryAdd(viewmodel, new BSPResource(viewmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
-                TryAdd(worldmodel, new BSPResource(worldmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+                TryAdd(playermodel.Trim(), new BSPResource(playermodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+                TryAdd(viewmodel.Trim(), new BSPResource(viewmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+                TryAdd(worldmodel.Trim(), new BSPResource(worldmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
             } else {
-                TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
+                TryAdd(path.Trim(), new BSPResource(path, new BSPResourceEntitySource(ent)));
             }
         }
     }
@@ -105,7 +105,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
                     path += ".wav";
                 }
             }
-            TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
+            TryAdd(path.Trim(), new BSPResource(path, new BSPResourceEntitySource(ent)));
         }
     }
     public void AddSprite(string classname, string key) {
@@ -122,13 +122,13 @@ public class BSPResources : Dictionary<string,BSPResource> {
             if (!path.StartsWith("sprites/")) {
                 path = "sprites/" + path;
             }
-            TryAdd(path, new BSPResource(path, new BSPResourceEntitySource(ent)));
+            TryAdd(path.Trim(), new BSPResource(path, new BSPResourceEntitySource(ent)));
         }
     }
     
     private void CheckSkyboxAndAdd(string path, IResourceSource source) {
         if (File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,path))) {
-            TryAdd(path, new BSPResource(path, source));
+            TryAdd(path.Trim(), new BSPResource(path, source));
         }
     }
 

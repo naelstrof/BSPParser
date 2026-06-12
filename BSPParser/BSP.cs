@@ -117,7 +117,28 @@ public class BSP {
         return builder.ToString();
     }
 
-    public BSPResources GetResources() {
+    private bool TryMatchEntityToWeaponSpriteText(BSPEntity entity, HashSet<string> files, out string weaponSpriteTextPath) {
+        if (entity.TryGetValue("classname", out var className)) {
+            foreach (var file in files) {
+                var filename = Path.GetFileNameWithoutExtension(file);
+                var fileExtension = Path.GetExtension(file);
+                if (!file.StartsWith("sprites")) {
+                    continue;
+                }
+                if (fileExtension != ".txt") {
+                    continue;
+                }
+                if (filename == className) {
+                    weaponSpriteTextPath = file;
+                    return true;
+                }
+            }
+        }
+        weaponSpriteTextPath = "";
+        return false;
+    }
+
+    private BSPResources GetResources(HashSet<string> allFiles) {
         var resources = new BSPResources(this);
         resources.AddSound( "ambient_generic", "message");
         resources.AddSound( "ambient_music", "message");
@@ -127,29 +148,24 @@ public class BSP {
         resources.AddSound( "weapon_custom_bullet", "sounds");
         resources.AddSound( "weapon_custom_bullet", "windup_snd");
         resources.AddSound( "weapon_custom_bullet", "wind_down_snd");
+        
         foreach (var weapon in entities.Where((ent) => ent.ContainsKey("classname") && ent["classname"].StartsWith("weapon_"))) {
-            if (weapon.ContainsKey("sprite_directory") && weapon.TryGetValue("weapon_name", out var weaponName)) {
-                var spriteTextPath = $"sprites/{weapon["sprite_directory"]}/{weaponName}.txt";
-                resources.TryAdd(spriteTextPath, new BSPResource(spriteTextPath, new BSPResourceEntitySource(weapon)));
-                if (!File.Exists(Path.Combine(addonDirectory.FullName, spriteTextPath))) {
-                    continue;
-                }
-                foreach (var line in File.ReadLines(Path.Combine(addonDirectory.FullName, spriteTextPath))) {
-                    var splits = line.Split(null);
-                    var count = 0;
-                    foreach (var element in splits) {
-                        if (string.IsNullOrEmpty(element.Trim())) {
-                            continue;
-                        }
-
-                        if (count++ != 2) continue;
-                        resources.TryAdd($"sprites/{element.Trim()}.spr",
-                            new BSPResource($"sprites/{element.Trim()}.spr", new BSPResourceEntitySource(weapon)));
-                        break;
+            if (TryMatchEntityToWeaponSpriteText(weapon, allFiles, out var weaponSpriteTextPath)) {
+                resources.TryAdd(weaponSpriteTextPath, new BSPResource(weaponSpriteTextPath, new BSPResourceEntitySource(weapon)));
+                var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, weaponSpriteTextPath)));
+                foreach (var sprite in weaponHudTokenizer.GetAllSprites()) {
+                    var testSprite = sprite.TrimStart('/');
+                    if (!testSprite.StartsWith("sprites/")) {
+                        testSprite = "sprites/" + testSprite;
                     }
+
+                    if (!testSprite.EndsWith(".spr")) {
+                        testSprite += ".spr";
+                    }
+                    resources.TryAdd($"{testSprite}", new BSPResource($"{testSprite}", new BSPResourceFileSource($"From weapon ent found in bsp, implied weapon sprite text.. {weaponSpriteTextPath}")));
                 }
             }
-
+            
             if (weapon.TryGetValue("wpn_p_model", out var pmodel) && !pmodel.StartsWith("*")) {
                 resources.TryAdd(pmodel, new BSPResource(pmodel, new BSPResourceEntitySource(weapon)));
             }
@@ -435,8 +451,8 @@ public class BSP {
         }
     }
 
-    public void FixResourcesInPlace(HashSet<string> defaultKeys) {
-        BSPResources generated_resources = GetResources();
+    public void FixResourcesInPlace(HashSet<string> defaultKeys, HashSet<string> allFiles) {
+        BSPResources generated_resources = GetResources(allFiles);
         BSPResources original_resources = GetResourceFile();
         
         generated_resources.RemoveBatch(defaultKeys);

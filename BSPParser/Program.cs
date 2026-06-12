@@ -100,9 +100,14 @@ if (args.Length == 1) {
         string result = reader.ReadToEnd();
         defaultKeys = new HashSet<string>(result.Split('\n'));
     }
+
+    HashSet<string> allFiles = new();
+    foreach (var file in Directory.EnumerateFiles(args[0], "*", SearchOption.AllDirectories)) {
+        allFiles.Add(file.Substring(args[0].Length).TrimStart('/'));
+    }
     foreach (var map in GetMaps(false, args[0])) {
         Console.WriteLine($"{map.Name}:");
         BSP bsp = new BSP(map.FullName);
-        bsp.FixResourcesInPlace(defaultKeys);
+        bsp.FixResourcesInPlace(defaultKeys, allFiles);
     }
 }
