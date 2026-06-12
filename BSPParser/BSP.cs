@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace BSPParser;
 
@@ -93,6 +94,10 @@ public class BSP {
         addonDirectory = new FileInfo(filePath).Directory?.Parent ?? throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
         TryReadStruct(stream, 0, out BSPHeader header);
         ParseEntities(stream, header);
+        if (filePath.Contains("opbt_4")) {
+            var str = GetEntitiesString();
+            File.WriteAllText("opbt_4_entities.txt", str);
+        }
     }
 
     public ICollection<BSPEntity> GetEntities() => entities;
@@ -106,6 +111,14 @@ public class BSP {
             mapExits.Add(ent["map"]);
         }
         return mapExits;
+    }
+
+    public string GetEntitiesString() {
+        StringBuilder builder = new StringBuilder();
+        foreach (var entity in entities) {
+            builder.Append(entity);
+        }
+        return builder.ToString();
     }
 
     public BSPResources GetResources() {
@@ -257,12 +270,17 @@ public class BSP {
         }
 
         if (File.Exists(GetConfigFilePath())) {
-            var config = new SvenConfig(File.ReadAllText(GetConfigFilePath()));
+            var config = new SvenConfigTokenizer(File.ReadAllText(GetConfigFilePath()));
             if (config.TryGetValue("globalmodellist", out var modelReplacementFilePath)) {
                 ParseModelReplacementFile(resources, new BSPResourceFileSource(modelReplacementFilePath), modelReplacementFilePath);
             }
             if (config.TryGetValue("globalsoundlist", out var soundReplacementFilePath)) {
                 ParseSoundReplacementFile(resources, new BSPResourceFileSource(soundReplacementFilePath), soundReplacementFilePath);
+            }
+
+            if (config.TryGetValue("map_script", out var mapScriptFolder)) {
+                var workingDirectory = Path.Combine(addonDirectory.FullName, "scripts", "maps");
+                ParseAngelScript(resources, mapScriptFolder, new DirectoryInfo(workingDirectory),0);
             }
 
             if (config.TryGetValue("sentence_file", out var sentenceFilePath)) {
@@ -297,6 +315,75 @@ public class BSP {
 
         resources.Clean();
         return resources;
+    }
+
+    private void ParseAngelScript(BSPResources resources, string scriptPath, DirectoryInfo workingDir, int depth) {
+        if (depth > 64) {
+            Console.Error.WriteLine($"Found a 64 deep include chain with script {scriptPath}, giving up, cyclical dependency?");
+            return;
+        }
+        if (!scriptPath.EndsWith(".as")) {
+            scriptPath += ".as";
+        }
+        var path = Path.Combine(workingDir.FullName, scriptPath);
+        FileInfo file = new FileInfo(path);
+        if (!workingDir.Exists || !file.Exists) {
+            Console.Error.WriteLine($"Couldn't find angel script {file.FullName} case-sensitivity issue?...");
+            return;
+        }
+        var tokenizer = new AngelScriptTokenizer(File.ReadAllText(file.FullName));
+        var includes = new HashSet<string>(tokenizer.GetAllIncludes());
+        foreach (var include in includes) {
+            if (file.Directory != null) {
+                ParseAngelScript(resources, include, file.Directory, depth+1);
+            }
+        }
+        var strings = new HashSet<string>(tokenizer.GetAllStrings());
+        foreach (var str in strings) {
+            if (str.EndsWith(".wav") || str.EndsWith(".ogg") || str.EndsWith("mp3")) {
+                resources.TryAdd($"sound/{str}",  new BSPResource($"sound/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            } else if (str.EndsWith(".mdl")) {
+                resources.TryAdd(str,  new BSPResource(str, new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            } else if (str.EndsWith(".spr")) {
+                resources.TryAdd($"sprites/{str}",  new BSPResource($"sprites/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            } else if (str.EndsWith(".tga") || str.EndsWith(".bmp")) {
+                resources.TryAdd($"gfx/env/{str}",  new BSPResource($"gfx/env/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+            } else {
+                if (TryFindFileWithoutExtension(str, out var realFile)) {
+                    var relativePath = Path.GetRelativePath(addonDirectory.FullName, realFile.FullName);
+                    resources.TryAdd(relativePath, new BSPResource(relativePath, new BSPResourceFileSource($"AngelScript: {scriptPath} (guessing)")));
+                }
+            }
+        }
+    }
+
+    private bool TryFindFileWithoutExtension(string path, out FileInfo realFile) {
+        var sound = Path.Combine(addonDirectory.FullName, "sound", $"{path}.wav");
+        realFile = new FileInfo(sound);
+        if (realFile.Exists) {
+            return true;
+        }
+        var model = Path.Combine(addonDirectory.FullName, $"{path}.mdl");
+        realFile = new FileInfo(model);
+        if (realFile.Exists) {
+            return true;
+        }
+        var sprite = Path.Combine(addonDirectory.FullName, "sprite", $"{path}.spr");
+        realFile = new FileInfo(sprite);
+        if (realFile.Exists) {
+            return true;
+        }
+        var envBMP = Path.Combine(addonDirectory.FullName, "gfx", "env", $"{path}.bmp");
+        realFile = new FileInfo(envBMP);
+        if (realFile.Exists) {
+            return true;
+        }
+        var envTGA = Path.Combine(addonDirectory.FullName, "gfx", "env", $"{path}.tga");
+        realFile = new FileInfo(envTGA);
+        if (realFile.Exists) {
+            return true;
+        }
+        return false;
     }
 
     private void ParseSoundReplacementFile(BSPResources resources, IResourceSource source, string value) {

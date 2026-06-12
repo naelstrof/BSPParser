@@ -8,4 +8,9 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
+    <ItemGroup>
+      <None Remove="SvenCoopDefaultFiles.txt" />
+      <Resource Include="SvenCoopDefaultFiles.txt" />
+    </ItemGroup>
+
 </Project>
