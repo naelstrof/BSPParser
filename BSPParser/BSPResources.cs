@@ -144,16 +144,16 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     public void TryParseSentenceFile(string sentencePath) {
-        if (!sentencePath.StartsWith('!') || !sentencePath.StartsWith('+')) {
-            return;
-        }
         sentencePath = sentencePath.Trim().TrimStart(['!','+','#','.',',']);
         if (!sentencePath.StartsWith("sound/")) {
             sentencePath = "sound/"+sentencePath;
         }
-        
-        if (!sentencePath.EndsWith(".txt")) {
+
+        var ext = Path.GetExtension(sentencePath);
+        if (string.IsNullOrEmpty(ext)) {
             sentencePath += ".txt";
+        } else if (ext != ".txt") {
+            return;
         }
         
         sentencePath = Path.Combine(bsp.GetAddonDirectory().FullName, sentencePath);

@@ -208,14 +208,27 @@ public class BSP {
             }
         }
 
-        resources.AddSpriteFromEntityAndKey( "env_sprite", "model");
         resources.AddModelFromEntityAndKey( "item_generic", "model");
         resources.AddModelFromEntityAndKey( "func_breakable", "gibmodel");
         resources.AddSpriteFromEntityAndKey( "trigger_camera", "cursor_sprite");
         resources.AddSpriteFromEntityAndKey( "cycler_wreckage", "model");
         resources.AddSpriteFromEntityAndKey( "env_beam", "texture");
         resources.AddSpriteFromEntityAndKey( "env_laser", "texture");
-        resources.AddSpriteFromEntityAndKey( "env_sprite", "model");
+        
+        foreach (var envSprite in GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "env_sprite" && ent.ContainsKey("model"))) {
+            var model = envSprite["model"];
+            if (resources.TryPathToModelPath(model, out var modelPath)) {
+                if (File.Exists(Path.Combine(addonDirectory.FullName, modelPath))) {
+                    resources.AddModel(model, new BSPResourceEntitySource(envSprite));
+                }
+            }
+            if (resources.TryPathToSpritePath(model, out var spritePath)) {
+                if (File.Exists(Path.Combine(addonDirectory.FullName, spritePath))) {
+                    resources.AddSprite(spritePath, new BSPResourceEntitySource(envSprite));
+                }
+            }
+        }
+
         resources.AddModelFromEntityAndKey( "squadmaker", "new_model");
         resources.AddModelFromEntityAndKey( "env_beverage", "model");
         resources.AddSkyboxFromEntityAndKey( "trigger_changesky", "skyname");
@@ -309,10 +322,10 @@ public class BSP {
                 }
             }
             if (config.TryGetValue("globalmodellist", out var modelReplacementFilePath)) {
-                ParseModelReplacementFile(resources, new BSPResourceFileSource(modelReplacementFilePath), modelReplacementFilePath);
+                ParseModelReplacementFile(resources, new BSPResourceFileSource(GetConfigFilePath()), modelReplacementFilePath);
             }
             if (config.TryGetValue("globalsoundlist", out var soundReplacementFilePath)) {
-                ParseSoundReplacementFile(resources, new BSPResourceFileSource(soundReplacementFilePath), soundReplacementFilePath);
+                ParseSoundReplacementFile(resources, new BSPResourceFileSource(GetConfigFilePath()), soundReplacementFilePath);
             }
 
             if (config.TryGetValue("map_script", out var mapScriptFolder)) {
@@ -340,7 +353,7 @@ public class BSP {
         var path = Path.Combine(workingDir.FullName, scriptPath);
         FileInfo file = new FileInfo(path);
         if (!workingDir.Exists || !file.Exists) {
-            Console.Error.WriteLine($"Couldn't find angel script {file.FullName} case-sensitivity issue?...");
+            Console.Error.WriteLine($"Couldn't find angel script {file.FullName} case-sensitivity issue or default asset?...skipping");
             return;
         }
         var tokenizer = new AngelScriptTokenizer(File.ReadAllText(file.FullName));
@@ -387,7 +400,7 @@ public class BSP {
             return;
         }
         foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
-            resources.AddSound(pair.Value, new BSPResourceFileSource($"Sound Replacement File: {value}"));
+            resources.AddSound(pair.Value, new BSPResourceFileSource(value));
         }
     }
     
@@ -409,7 +422,7 @@ public class BSP {
             if (pair.Value.StartsWith("*")) {
                 continue;
             }
-            resources.TryAdd(pair.Value, new BSPResource(pair.Value, source));
+            resources.AddModel(pair.Value, new BSPResourceFileSource(value));
         }
     }
 

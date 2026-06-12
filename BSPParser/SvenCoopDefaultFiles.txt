@@ -2259,7 +2259,6 @@ models/hunger/v_hungersatchel_radio.mdl
 models/hunger/v_hungershotgun.mdl
 models/hunger/v_shovel.mdl
 models/hunger/v_spanner.mdl
-models/hunger/v_syringe.mdl
 models/hunger/v_taurus.mdl
 models/hunger/v_tnt.mdl
 models/hunger/w_ap9.mdl
