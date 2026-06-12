@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace BSPParser;
@@ -154,8 +155,54 @@ public class BSPResources : Dictionary<string,BSPResource> {
         }
         return false;
     }
+
+    private bool TryGetInvalidFolderCasing(string filePath, [NotNullWhen(true)] out string? invalidFolderName, [NotNullWhen(true)] out DirectoryInfo? workingDir) {
+        var dir = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrEmpty(dir) && !Directory.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,dir))) {
+            var dirName = Path.GetFileName(dir);
+            dir = Path.GetDirectoryName(dir);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,dir))) {
+                workingDir = new DirectoryInfo(Path.Combine(bsp.GetAddonDirectory().FullName,dir));
+                invalidFolderName = dirName;
+                return true;
+            }
+        }
+        workingDir = null;
+        invalidFolderName = null;
+        return false;
+    }
+
+    private bool TryGetCorrectFolderCasing(string invalidFolderName, DirectoryInfo workingDir, out string? correctFolderName) {
+        foreach (var folder in workingDir.GetDirectories()) {
+            if (folder.Name.Equals(invalidFolderName, StringComparison.InvariantCultureIgnoreCase)) {
+                correctFolderName = folder.Name;
+                return true;
+            }
+        }
+
+        correctFolderName = null;
+        return false;
+    }
+
+    public void RemoveBatch(ICollection<string> keys) {
+        foreach (var key in keys) {
+            Remove(key);
+        }
+    }
     
     public void FixMalformedResources(DirectoryInfo addonDirectory) {
+        var keys = Keys;
+        foreach (var key in keys) {
+            while (TryGetInvalidFolderCasing(key, out var invalidFolderName, out var workingDir)) {
+                if (!TryGetCorrectFolderCasing(invalidFolderName, workingDir, out var correctFolderName)) break;
+                var newKey = key.Replace(invalidFolderName, correctFolderName);
+                var keyValue = this[key];
+                Remove(key);
+                Add(newKey, keyValue);
+                Console.Error.WriteLine($"Fixing incorrect casing on {key}, for folder {invalidFolderName} -> {correctFolderName}");
+            }
+        }
+        
         List<string> paths = new List<string>();
         foreach (var key in Keys) {
             paths.Add(Path.Combine(addonDirectory.FullName, key));

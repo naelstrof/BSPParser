@@ -9,8 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <None Remove="SvenCoopDefaultFiles.txt" />
-      <Resource Include="SvenCoopDefaultFiles.txt" />
+      <EmbeddedResource Include="SvenCoopDefaultFiles.txt" />
     </ItemGroup>
 
 </Project>

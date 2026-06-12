@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Reflection;
 using BSPParser;
 
 IEnumerable<FileInfo> GetMaps(bool allowGameFolder, string path) {
@@ -91,9 +92,17 @@ if (args.Length == 2) {
 
 // Scary in-place fixup of random map downloaded from sven coop map database
 if (args.Length == 1) {
+    var assembly = Assembly.GetExecutingAssembly();
+    var resourceName = "BSPParser.SvenCoopDefaultFiles.txt";
+    HashSet<string> defaultKeys;
+    using (Stream stream = assembly.GetManifestResourceStream(resourceName) ?? throw new InvalidOperationException( "No embedded text resource? Misconfigured build I guess."))
+    using (StreamReader reader = new StreamReader(stream)) {
+        string result = reader.ReadToEnd();
+        defaultKeys = new HashSet<string>(result.Split('\n'));
+    }
     foreach (var map in GetMaps(false, args[0])) {
         Console.WriteLine($"{map.Name}:");
         BSP bsp = new BSP(map.FullName);
-        bsp.FixResourcesInPlace();
+        bsp.FixResourcesInPlace(defaultKeys);
     }
 }

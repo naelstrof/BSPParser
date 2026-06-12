@@ -345,7 +345,11 @@ public class BSP {
             } else if (str.EndsWith(".mdl")) {
                 resources.TryAdd(str,  new BSPResource(str, new BSPResourceFileSource($"AngelScript: {scriptPath}")));
             } else if (str.EndsWith(".spr")) {
-                resources.TryAdd($"sprites/{str}",  new BSPResource($"sprites/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+                if (!str.StartsWith("sprites/")) {
+                    resources.TryAdd($"sprites/{str}",  new BSPResource($"sprites/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+                } else {
+                    resources.TryAdd($"{str}", new BSPResource($"{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
+                }
             } else if (str.EndsWith(".tga") || str.EndsWith(".bmp")) {
                 resources.TryAdd($"gfx/env/{str}",  new BSPResource($"gfx/env/{str}", new BSPResourceFileSource($"AngelScript: {scriptPath}")));
             } else {
@@ -430,9 +434,12 @@ public class BSP {
         }
     }
 
-    public void FixResourcesInPlace() {
+    public void FixResourcesInPlace(HashSet<string> defaultKeys) {
         BSPResources generated_resources = GetResources();
         BSPResources original_resources = GetResourceFile();
+        
+        generated_resources.RemoveBatch(defaultKeys);
+        original_resources.RemoveBatch(defaultKeys);
 
         // Assets that we missed, possibly referred to by script, or erroneously included by the map creator. Impossible to differentiate. So we add them all.
         foreach (var resource in
@@ -451,7 +458,7 @@ public class BSP {
         foreach (var resource in generated_resources.Where((a) =>
                      !original_resources.ContainsKey(a.Key) &&
                      File.Exists(Path.Combine(GetAddonDirectory().FullName, a.Key)))) {
-            Console.WriteLine($"\tAdding due to exists in BSP ent: {resource.Value}");
+            Console.WriteLine($"\tAdding: {resource.Value}");
         }
 
         generated_resources.Save(GetResourceFilePath());
