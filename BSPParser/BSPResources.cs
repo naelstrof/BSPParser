@@ -276,14 +276,15 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     
     public void FixMalformedResources(DirectoryInfo addonDirectory) {
-        var keys = Keys;
+        var keys = new List<string>(Keys);
         foreach (var key in keys) {
-            while (TryGetInvalidFolderCasing(key, out var invalidFolderName, out var workingDir)) {
+            var newKey = key;
+            while (TryGetInvalidFolderCasing(newKey, out var invalidFolderName, out var workingDir)) {
                 if (!TryGetCorrectFolderCasing(invalidFolderName, workingDir, out var correctFolderName)) break;
-                var newKey = key.Replace(invalidFolderName, correctFolderName);
-                var keyValue = this[key];
-                Remove(key);
-                Add(newKey, keyValue);
+                var keyValue = this[newKey];
+                Remove(newKey);
+                newKey = newKey.Replace(invalidFolderName, correctFolderName);
+                TryAdd(newKey, keyValue);
                 Console.Error.WriteLine($"Fixing incorrect casing on {key}, for folder {invalidFolderName} -> {correctFolderName}");
             }
         }
