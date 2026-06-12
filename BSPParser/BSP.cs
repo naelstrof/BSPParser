@@ -141,14 +141,14 @@ public class BSP {
             weaponSpriteTextPath += ".txt";
         }
 
-        weaponSpriteTextPath = Path.Combine(addonDirectory.FullName, weaponSpriteTextPath);
-        if (!File.Exists(weaponSpriteTextPath)) {
-            Console.Error.WriteLine($"Couldn't find weapon sprite text file {weaponSpriteTextPath} case-sensitivity issue?...");
+        var realPath = Path.Combine(addonDirectory.FullName, weaponSpriteTextPath);
+        if (!File.Exists(realPath)) {
+            Console.Error.WriteLine($"Couldn't find weapon sprite text file {realPath} case-sensitivity issue?...");
             return;
         }
         
         resources.TryAdd(weaponSpriteTextPath, new BSPResource(weaponSpriteTextPath, source));
-        var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, weaponSpriteTextPath)));
+        var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(realPath));
         foreach (var sprite in weaponHudTokenizer.GetAllSprites()) {
             resources.AddSprite(sprite, new BSPResourceFileSource($"from {source}, found {weaponSpriteTextPath}"));
         }
