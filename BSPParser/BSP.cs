@@ -94,10 +94,6 @@ public class BSP {
         addonDirectory = new FileInfo(filePath).Directory?.Parent ?? throw new Exception("Map isn't in a directory that makes sense! Please input a map either in a game folder, or freshly unzipped within a maps/ folder.");
         TryReadStruct(stream, 0, out BSPHeader header);
         ParseEntities(stream, header);
-        if (filePath.Contains("opbt_4")) {
-            var str = GetEntitiesString();
-            File.WriteAllText("opbt_4_entities.txt", str);
-        }
     }
 
     public ICollection<BSPEntity> GetEntities() => entities;
