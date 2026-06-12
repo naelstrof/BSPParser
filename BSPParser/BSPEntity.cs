@@ -8,6 +8,7 @@ public class BSPEntity : Dictionary<string,string> {
     public BSPEntity(BSP? parent) : base() {
         this.parent = parent;
     }
+    
     public override string ToString() {
         StringBuilder builder = new StringBuilder();
         builder.Append("{\n");

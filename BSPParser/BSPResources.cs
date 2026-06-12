@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
@@ -40,37 +39,93 @@ public class BSPResources : Dictionary<string,BSPResource> {
             Remove(pair.Key);
         }
     }
-    
-    public void AddModel(string classname, string key) {
-        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = ent[key].Trim();
-            if (string.IsNullOrEmpty(path)) {
-                continue;
-            }
-            if (ent[key].StartsWith("*")) {
-                continue;
-            }
-            if (string.IsNullOrEmpty(Path.GetExtension(path))) {
-                var findModel = FindFileWithoutExtension(path);
-                if (findModel != null) {
-                    path += Path.GetExtension(findModel);
-                } else {
-                    path += ".mdl";
-                }
-            }
 
-            var filename = Path.GetFileName(path);
-            var filepath = Path.GetDirectoryName(path) ?? string.Empty;
-            if (filename.StartsWith("p_") || filename.StartsWith("v_") || filename.StartsWith("w_")) {
-                var playermodel = Path.Combine(filepath, "p" + filename[1..]);
-                var viewmodel = Path.Combine(filepath, "v" + filename[1..]);
-                var worldmodel = Path.Combine(filepath, "w" + filename[1..]);
-                TryAdd(playermodel.Trim(), new BSPResource(playermodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
-                TryAdd(viewmodel.Trim(), new BSPResource(viewmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
-                TryAdd(worldmodel.Trim(), new BSPResource(worldmodel, new BSPResourceInferred($"from bsp model ent in {ent.GetParent()}")));
+    public bool TryPathToModelPath(string path, out string modelPath) {
+        modelPath = path.Trim();
+        if (string.IsNullOrEmpty(modelPath)) {
+            return false;
+        }
+        if (modelPath.StartsWith("*")) {
+            return false;
+        }
+        if (!modelPath.EndsWith(".mdl")) {
+            modelPath += ".mdl";
+        }
+        if (!modelPath.StartsWith("models/")) {
+            modelPath = "models/" + modelPath;
+        }
+        modelPath = modelPath.Trim();
+        return true;
+    }
+    public bool TryPathToSpritePath(string path, out string spritePath) {
+        spritePath = path.TrimStart('/').Trim();
+        if (string.IsNullOrEmpty(spritePath)) {
+            return false;
+        }
+        if (!spritePath.EndsWith(".spr")) {
+            spritePath += ".spr";
+        }
+        if (!spritePath.StartsWith("sprites/")) {
+            spritePath = "sprites/" + spritePath;
+        }
+        spritePath = spritePath.Trim();
+        return true;
+    }
+
+    public bool TryPathToSoundPath(string path, out string soundPath) {
+        soundPath = path.Trim();
+        if (string.IsNullOrEmpty(soundPath)) {
+            return false;
+        }
+        
+        // Is a sentence
+        if (soundPath.StartsWith('!') || soundPath.StartsWith('+')) {
+            return false;
+        }
+        
+        // built-in sound
+        if (int.TryParse(soundPath, out var number) && number is >= 0 and <= 25) {
+            return false;
+        }
+        
+        soundPath = soundPath.TrimStart(['#',',']);
+        if (!soundPath.StartsWith("sound/") && !soundPath.StartsWith("../")) {
+            soundPath = "sound/" + soundPath;
+        }
+        soundPath = soundPath.TrimStart(['.','/']);
+        if (string.IsNullOrEmpty(Path.GetExtension(soundPath))) {
+            var findSound = FindFileWithoutExtension(soundPath);
+            if (findSound != null) {
+                soundPath += Path.GetExtension(findSound);
             } else {
-                TryAdd(path.Trim(), new BSPResource(path, new BSPResourceEntitySource(ent)));
+                soundPath += ".wav";
             }
+        }
+        soundPath = soundPath.Trim();
+        return true;
+    }
+
+    public void AddModel(string path, IResourceSource source) {
+        if (!TryPathToModelPath(path, out var modelPath)) {
+            return;
+        }
+        var filename = Path.GetFileName(modelPath);
+        var filepath = Path.GetDirectoryName(modelPath) ?? string.Empty;
+        if (filename.StartsWith("p_") || filename.StartsWith("v_") || filename.StartsWith("w_")) {
+            var playermodel = Path.Combine(filepath, "p" + filename[1..]);
+            var viewmodel = Path.Combine(filepath, "v" + filename[1..]);
+            var worldmodel = Path.Combine(filepath, "w" + filename[1..]);
+            TryAdd(playermodel.Trim(), new BSPResource(playermodel, new BSPResourceInferred($"inferred from: {source}")));
+            TryAdd(viewmodel.Trim(), new BSPResource(viewmodel, new BSPResourceInferred($"inferred from {source}")));
+            TryAdd(worldmodel.Trim(), new BSPResource(worldmodel, new BSPResourceInferred($"inferred from {source}")));
+        } else {
+            TryAdd(modelPath.Trim(), new BSPResource(modelPath, source));
+        }
+    }
+    
+    public void AddModelFromEntityAndKey(string classname, string key) {
+        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
+            AddModel(ent[key], new BSPResourceEntitySource(ent));
         }
     }
 
@@ -87,52 +142,81 @@ public class BSPResources : Dictionary<string,BSPResource> {
         }
         return null;
     }
-    
-    public void AddSound(string classname, string key) {
-        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var sound = ent[key].Trim();
-            if (string.IsNullOrEmpty(sound)) {
-                continue;
-            }
-            // Not a sound, we're a sentence!
-            if (sound.StartsWith('!')) {
-                continue;
-            }
 
-            // built-in sound
-            if (int.TryParse(sound, out var number) && number is >= 0 and <= 16) {
+    public void TryParseSentenceFile(string sentencePath) {
+        if (!sentencePath.StartsWith('!') || !sentencePath.StartsWith('+')) {
+            return;
+        }
+        sentencePath = sentencePath.Trim().TrimStart(['!','+','#','.',',']);
+        if (!sentencePath.StartsWith("sound/")) {
+            sentencePath = "sound/"+sentencePath;
+        }
+        
+        if (!sentencePath.EndsWith(".txt")) {
+            sentencePath += ".txt";
+        }
+        
+        sentencePath = Path.Combine(bsp.GetAddonDirectory().FullName, sentencePath);
+        if (!File.Exists(sentencePath)) {
+            return;
+        }
+        var keyPairs = new SentenceTokenizer(File.ReadAllText(sentencePath));
+        foreach (var pair in keyPairs) {
+            // Double check we're actually using a value from the sentences.
+            if (!pair.Key.StartsWith("HEV") && !bsp.GetEntities().Any((ent) => { return ent.Any(innerPair => innerPair.Value.StartsWith('!') && innerPair.Value.Trim('!') == pair.Key); } )) {
                 continue;
             }
-            var path = $"sound/{sound.TrimStart(['+','#'])}";
-            if (string.IsNullOrEmpty(Path.GetExtension(path))) {
-                var findSound = FindFileWithoutExtension(path);
-                if (findSound != null) {
-                    path += Path.GetExtension(findSound);
-                } else {
-                    path += ".wav";
-                }
-            }
-            TryAdd(path.Trim(), new BSPResource(path, new BSPResourceEntitySource(ent)));
+            AddSound(pair.Value, new BSPResourceFileSource(sentencePath));
         }
     }
-    public void AddSprite(string classname, string key) {
+
+    public void AddSound(string soundPath, IResourceSource source) {
+        TryParseSentenceFile(soundPath);
+        if (!TryPathToSoundPath(soundPath, out var sound)) {
+            return;
+        }
+        TryAdd(sound, new BSPResource(soundPath, source));
+    }
+
+    public void AddSoundFromEntityAndKey(string classname, string key) {
         foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var path = ent[key].TrimStart('/').Trim();
-            if (string.IsNullOrEmpty(path)) {
-                continue;
-            }
-            if (string.IsNullOrEmpty(Path.GetExtension(path))) {
-                var findSprite = FindFileWithoutExtension(path);
-                if (findSprite != null) {
-                    path += Path.GetExtension(findSprite);
-                } else {
-                    path += ".spr";
-                }
-            }
-            if (!path.StartsWith("sprites/")) {
-                path = "sprites/" + path;
-            }
-            TryAdd(path.Trim(), new BSPResource(path, new BSPResourceEntitySource(ent)));
+            AddSound(ent[key], new BSPResourceEntitySource(ent));
+        }
+    }
+
+    public void AddSkybox(string name, IResourceSource source) {
+        var skyname = name;
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}bk.tga", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}bk.bmp", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}dn.tga", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}dn.bmp", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}ft.tga", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}ft.bmp", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}lf.tga", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}lf.bmp", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}rt.tga", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}rt.bmp", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}up.tga", source);
+        CheckSkyboxAndAdd( $"gfx/env/{skyname}up.bmp", source);
+    }
+
+    public void AddSprite(string name, IResourceSource source) {
+        var path = name.TrimStart('/').Trim();
+        if (string.IsNullOrEmpty(path)) {
+            return;
+        }
+        if (!path.EndsWith(".spr")) {
+            path += ".spr";
+        }
+        if (!path.StartsWith("sprites/")) {
+            path = "sprites/" + path;
+        }
+        TryAdd(path.Trim(), new BSPResource(path, source));
+    }
+    
+    public void AddSpriteFromEntityAndKey(string classname, string key) {
+        foreach (var ent in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
+            AddSprite(ent[key], new BSPResourceEntitySource(ent));
         }
     }
     
@@ -142,21 +226,9 @@ public class BSPResources : Dictionary<string,BSPResource> {
         }
     }
 
-    public void AddSkybox(string classname, string key) {
+    public void AddSkyboxFromEntityAndKey(string classname, string key) {
         foreach (var skychange in bsp.GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == classname && ent.ContainsKey(key))) {
-            var skyname = skychange[key];
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}bk.tga", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}bk.bmp", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}dn.tga", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}dn.bmp", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}ft.tga", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}ft.bmp", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}lf.tga", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}lf.bmp", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}rt.tga", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}rt.bmp", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}up.tga", new BSPResourceEntitySource(skychange));
-            CheckSkyboxAndAdd( $"gfx/env/{skyname}up.bmp", new BSPResourceEntitySource(skychange));
+            AddSkybox(skychange[key], new BSPResourceEntitySource(skychange));
         }
     }
 

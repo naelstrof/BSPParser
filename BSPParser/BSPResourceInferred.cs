@@ -6,6 +6,8 @@ public class BSPResourceInferred(string source) : IResourceSource {
         return GetResourceDescription();
     }
 
+    public bool GetInferred() => true;
+
     public string GetResourceDescription() {
         return $"[Added by inferring: {source}]";
     }

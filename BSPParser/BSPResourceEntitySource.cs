@@ -3,6 +3,7 @@ namespace BSPParser;
 public class BSPResourceEntitySource : IResourceSource {
     private BSPEntity entity;
 
+    public bool GetInferred() => false;
     public BSPResourceEntitySource(BSPEntity entity) {
         this.entity = entity;
     }

@@ -5,6 +5,8 @@ public class BSPResourceFileSource : IResourceSource {
     public BSPResourceFileSource(string filepath) {
         this.filepath = filepath;
     }
+    
+    public bool GetInferred() => false;
 
     public override string ToString() {
         return GetResourceDescription();
