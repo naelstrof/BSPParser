@@ -48,8 +48,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (modelPath.StartsWith("*")) {
             return false;
         }
-        if (!modelPath.EndsWith(".mdl")) {
+        var ext = Path.GetExtension(modelPath);
+        if (string.IsNullOrEmpty(ext)) {
             modelPath += ".mdl";
+        } else if (ext != ".mdl") {
+            return false;
         }
         if (!modelPath.StartsWith("models/")) {
             modelPath = "models/" + modelPath;
@@ -62,8 +65,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (string.IsNullOrEmpty(spritePath)) {
             return false;
         }
-        if (!spritePath.EndsWith(".spr")) {
+        var ext = Path.GetExtension(spritePath);
+        if (string.IsNullOrEmpty(ext)) {
             spritePath += ".spr";
+        } else if (ext != ".spr") {
+            return false;
         }
         if (!spritePath.StartsWith("sprites/")) {
             spritePath = "sprites/" + spritePath;

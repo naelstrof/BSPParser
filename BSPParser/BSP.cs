@@ -218,14 +218,10 @@ public class BSP {
         foreach (var envSprite in GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "env_sprite" && ent.ContainsKey("model"))) {
             var model = envSprite["model"];
             if (resources.TryPathToModelPath(model, out var modelPath)) {
-                if (File.Exists(Path.Combine(addonDirectory.FullName, modelPath))) {
-                    resources.AddModel(model, new BSPResourceEntitySource(envSprite));
-                }
+                resources.AddModel(model, new BSPResourceEntitySource(envSprite));
             }
             if (resources.TryPathToSpritePath(model, out var spritePath)) {
-                if (File.Exists(Path.Combine(addonDirectory.FullName, spritePath))) {
-                    resources.AddSprite(spritePath, new BSPResourceEntitySource(envSprite));
-                }
+                resources.AddSprite(spritePath, new BSPResourceEntitySource(envSprite));
             }
         }
 
@@ -422,7 +418,12 @@ public class BSP {
             if (pair.Value.StartsWith("*")) {
                 continue;
             }
-            resources.AddModel(pair.Value, new BSPResourceFileSource(value));
+            if (resources.TryPathToModelPath(pair.Value, out var modelPath)) {
+                resources.AddModel(modelPath, new BSPResourceFileSource(value));
+            }
+            if (resources.TryPathToSpritePath(pair.Value, out var spritePath)) {
+                resources.AddSprite(spritePath, new BSPResourceFileSource(value));
+            }
         }
     }
 
