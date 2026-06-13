@@ -105,6 +105,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
         return true;
     }
 
+    // For debug on output
+    //public new void TryAdd(string key, BSPResource value) {
+        //((Dictionary<string,BSPResource>)this).TryAdd(key, value);
+    //}
+
     public void AddModel(string path, IResourceSource source) {
         if (!TryPathToModelPath(path, out var modelPath)) {
             return;
@@ -115,11 +120,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
             var playermodel = Path.Combine(filepath, "p" + filename[1..]);
             var viewmodel = Path.Combine(filepath, "v" + filename[1..]);
             var worldmodel = Path.Combine(filepath, "w" + filename[1..]);
-            TryAdd(playermodel.Trim(), new BSPResource(playermodel, new BSPResourceInferred($"inferred from: {source}")));
-            TryAdd(viewmodel.Trim(), new BSPResource(viewmodel, new BSPResourceInferred($"inferred from {source}")));
-            TryAdd(worldmodel.Trim(), new BSPResource(worldmodel, new BSPResourceInferred($"inferred from {source}")));
+            TryAdd(playermodel.Trim(), new BSPResource(playermodel.Trim(), new BSPResourceInferred($"inferred from: {source}")));
+            TryAdd(viewmodel.Trim(), new BSPResource(viewmodel.Trim(), new BSPResourceInferred($"inferred from {source}")));
+            TryAdd(worldmodel.Trim(), new BSPResource(worldmodel.Trim(), new BSPResourceInferred($"inferred from {source}")));
         } else {
-            TryAdd(modelPath.Trim(), new BSPResource(modelPath, source));
+            TryAdd(modelPath.Trim(), new BSPResource(modelPath.Trim(), source));
         }
     }
     
@@ -166,6 +171,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
             if (!pair.Key.StartsWith("HEV") && !bsp.GetEntities().Any((ent) => { return ent.Any(innerPair => innerPair.Value.StartsWith('!') && innerPair.Value.Trim('!') == pair.Key); } )) {
                 continue;
             }
+
             AddSound(pair.Value, new BSPResourceFileSource(sentencePath));
         }
     }
@@ -175,7 +181,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (!TryPathToSoundPath(soundPath, out var sound)) {
             return;
         }
-        TryAdd(sound, new BSPResource(soundPath, source));
+        TryAdd(sound, new BSPResource(sound, source));
     }
 
     public void AddSoundFromEntityAndKey(string classname, string key) {
@@ -211,7 +217,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (!path.StartsWith("sprites/")) {
             path = "sprites/" + path;
         }
-        TryAdd(path.Trim(), new BSPResource(path, source));
+        TryAdd(path.Trim(), new BSPResource(path.Trim(), source));
     }
     
     public void AddSpriteFromEntityAndKey(string classname, string key) {
@@ -222,7 +228,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     
     private void CheckSkyboxAndAdd(string path, IResourceSource source) {
         if (File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,path))) {
-            TryAdd(path.Trim(), new BSPResource(path, source));
+            TryAdd(path.Trim(), new BSPResource(path.Trim(), source));
         }
     }
 
@@ -270,7 +276,16 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     public void RemoveBatch(ICollection<string> keys) {
+        // Case insensitive remove...
+        List<string> removeKeys = new List<string>();
         foreach (var key in keys) {
+            foreach (var pair in this) {
+                if (pair.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)) {
+                    removeKeys.Add(pair.Key);
+                }
+            }
+        }
+        foreach (var key in removeKeys) {
             Remove(key);
         }
     }
