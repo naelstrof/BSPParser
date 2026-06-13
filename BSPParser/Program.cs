@@ -101,7 +101,7 @@ if (args.Length == 1) {
         defaultKeys = new HashSet<string>(result.Split('\n'));
     }
 
-    HashSet<string> allFiles = new();
+    HashSet<string> allFiles = new(StringComparer.OrdinalIgnoreCase);
     foreach (var file in Directory.EnumerateFiles(args[0], "*", SearchOption.AllDirectories)) {
         allFiles.Add(file.Substring(args[0].Length).TrimStart('/'));
     }

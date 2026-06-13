@@ -285,7 +285,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
                 Remove(newKey);
                 newKey = newKey.Replace(invalidFolderName, correctFolderName);
                 TryAdd(newKey, keyValue);
-                Console.Error.WriteLine($"Fixing incorrect casing on {key}, for folder {invalidFolderName} -> {correctFolderName}");
+                Console.Error.WriteLine($"\tFixing incorrect casing on {key}, for folder {invalidFolderName} -> {correctFolderName}");
             }
         }
         
