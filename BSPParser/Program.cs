@@ -9,7 +9,7 @@ IEnumerable<FileInfo> GetMaps(bool allowGameFolder, string path) {
     }
 
     if (!allowGameFolder) {
-        if (Directory.Exists(Path.Combine( addonDirectory.Parent?.FullName ?? throw new InvalidOperationException( "Don't run this on a root directory please, or maybe I don't have enough permission to see up a dir?"), "svencoop"))) {
+        if (Directory.Exists(Path.Combine( addonDirectory.Parent?.FullName ?? throw new InvalidOperationException( "Don't run this on a root directory please, or maybe I don't have enough permission to see up a dir?"), "svencoop", "logs"))) {
             throw new Exception("Please only run this utility on uninstalled map packs. It's designed within limitations that we cannot truly build a full dependency graph.");
         }
     }
