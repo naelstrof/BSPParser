@@ -102,11 +102,37 @@ public class BSPChangeLevelNode {
             fileInfo = gameInfo;
             return true;
         }
+
+        foreach (var file in Directory.GetFiles(Path.Combine(svenCoopDirectory, "maps"))) {
+            var ext = Path.GetExtension(file);
+            if (string.IsNullOrEmpty(ext) || !ext.Equals(".bsp", StringComparison.InvariantCultureIgnoreCase)) {
+                continue;
+            }
+            var name = Path.GetFileNameWithoutExtension(file);
+            if (name.Equals(exitName, StringComparison.InvariantCultureIgnoreCase)) {
+                fileInfo = new FileInfo(file);
+                return true;
+            }
+        }
+        
         var addonInfo = new FileInfo(Path.Combine(svenCoopAddonDirectory, "maps", exitName+".bsp"));
         if (addonInfo.Exists) {
             fileInfo = addonInfo;
             return true;
         }
+        
+        foreach (var file in Directory.GetFiles(Path.Combine(svenCoopAddonDirectory, "maps"))) {
+            var ext = Path.GetExtension(file);
+            if (string.IsNullOrEmpty(ext) || !ext.Equals(".bsp", StringComparison.InvariantCultureIgnoreCase)) {
+                continue;
+            }
+            var name = Path.GetFileNameWithoutExtension(file);
+            if (name.Equals(exitName, StringComparison.InvariantCultureIgnoreCase)) {
+                fileInfo = new FileInfo(file);
+                return true;
+            }
+        }
+        
         // Backup, user is probably running on an arbitrary map pack for debug purposes.
         var sameDir = new FileInfo(Path.Combine(bsp.GetAddonDirectory().FullName, "maps", exitName+".bsp"));
         if (sameDir.Exists) {
