@@ -8,8 +8,8 @@ public static class CaseSensitivityTools {
 
     public static void FixMalformedCasing(ICollection<string> correctPaths) {
         foreach (var path in correctPaths) {
-            var fileName = Path.GetFileName(path);
-            var directory = Path.GetDirectoryName(path);
+            var fileName = PathExtensions.GetFileName(path);
+            var directory = PathExtensions.GetDirectoryName(path);
             if (directory == null) {
                 continue;
             }
@@ -19,14 +19,14 @@ public static class CaseSensitivityTools {
                 continue;
             }
 
-            if (FileExistsCaseSensitive(Path.Combine(directoryInfo.FullName, fileName))) {
+            if (FileExistsCaseSensitive(PathExtensions.Combine(directoryInfo.FullName, fileName))) {
                 continue;
             }
 
             foreach (var file in directoryInfo.GetFiles()) {
                 if (file.Name.ToLowerInvariant() == fileName.ToLowerInvariant() && file.Name != fileName) {
-                    Console.WriteLine($"Renaming {file.FullName} to {Path.Combine(directoryInfo.FullName, fileName)}");
-                    File.Move(file.FullName, Path.Combine(directoryInfo.FullName, fileName));
+                    Console.WriteLine($"Renaming {file.FullName} to {PathExtensions.Combine(directoryInfo.FullName, fileName)}");
+                    File.Move(file.FullName, PathExtensions.Combine(directoryInfo.FullName, fileName));
                 }
             }
         }

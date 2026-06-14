@@ -95,38 +95,38 @@ public class BSPChangeLevelNode {
         if (svenGameDirectory == null) {
             throw new FileNotFoundException($"Cannot find game directory... Trying to check the parent of folder {bsp.GetAddonDirectory()} and failing somehow!");
         }
-        var svenCoopDirectory = Path.Combine(svenGameDirectory.FullName, "svencoop");
-        var svenCoopAddonDirectory = Path.Combine(svenGameDirectory.FullName, "svencoop_addon");
-        var gameInfo = new FileInfo(Path.Combine(svenCoopDirectory, "maps", exitName+".bsp"));
+        var svenCoopDirectory = PathExtensions.Combine(svenGameDirectory.FullName, "svencoop");
+        var svenCoopAddonDirectory = PathExtensions.Combine(svenGameDirectory.FullName, "svencoop_addon");
+        var gameInfo = new FileInfo(PathExtensions.Combine(svenCoopDirectory, "maps", exitName+".bsp"));
         if (gameInfo.Exists) {
             fileInfo = gameInfo;
             return true;
         }
 
-        foreach (var file in Directory.GetFiles(Path.Combine(svenCoopDirectory, "maps"))) {
+        foreach (var file in Directory.GetFiles(PathExtensions.Combine(svenCoopDirectory, "maps"))) {
             var ext = Path.GetExtension(file);
             if (string.IsNullOrEmpty(ext) || !ext.Equals(".bsp", StringComparison.InvariantCultureIgnoreCase)) {
                 continue;
             }
-            var name = Path.GetFileNameWithoutExtension(file);
+            var name = PathExtensions.GetFileNameWithoutExtension(file);
             if (name.Equals(exitName, StringComparison.InvariantCultureIgnoreCase)) {
                 fileInfo = new FileInfo(file);
                 return true;
             }
         }
         
-        var addonInfo = new FileInfo(Path.Combine(svenCoopAddonDirectory, "maps", exitName+".bsp"));
+        var addonInfo = new FileInfo(PathExtensions.Combine(svenCoopAddonDirectory, "maps", exitName+".bsp"));
         if (addonInfo.Exists) {
             fileInfo = addonInfo;
             return true;
         }
         
-        foreach (var file in Directory.GetFiles(Path.Combine(svenCoopAddonDirectory, "maps"))) {
-            var ext = Path.GetExtension(file);
+        foreach (var file in Directory.GetFiles(PathExtensions.Combine(svenCoopAddonDirectory, "maps"))) {
+            var ext = PathExtensions.GetExtension(file);
             if (string.IsNullOrEmpty(ext) || !ext.Equals(".bsp", StringComparison.InvariantCultureIgnoreCase)) {
                 continue;
             }
-            var name = Path.GetFileNameWithoutExtension(file);
+            var name = PathExtensions.GetFileNameWithoutExtension(file);
             if (name.Equals(exitName, StringComparison.InvariantCultureIgnoreCase)) {
                 fileInfo = new FileInfo(file);
                 return true;
@@ -134,7 +134,7 @@ public class BSPChangeLevelNode {
         }
         
         // Backup, user is probably running on an arbitrary map pack for debug purposes.
-        var sameDir = new FileInfo(Path.Combine(bsp.GetAddonDirectory().FullName, "maps", exitName+".bsp"));
+        var sameDir = new FileInfo(PathExtensions.Combine(bsp.GetAddonDirectory().FullName, "maps", exitName+".bsp"));
         if (sameDir.Exists) {
             fileInfo = sameDir;
             return true;
@@ -173,7 +173,7 @@ public class BSPChangeLevelNode {
     }
 
     public string GetMapName() {
-        return Path.GetFileNameWithoutExtension(bspFile.FullName);
+        return PathExtensions.GetFileNameWithoutExtension(bspFile.FullName);
     }
 
     public override string ToString() {

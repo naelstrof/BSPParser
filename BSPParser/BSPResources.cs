@@ -16,13 +16,13 @@ public class BSPResources : Dictionary<string,BSPResource> {
         var filesource = new BSPResourceFileSource(resourcesFilePath);
         foreach (var line in File.ReadLines(resourcesFilePath)) {
             var trimmed = line.Trim();
-            var filename = Path.GetFileName(trimmed);
-            var filepath = Path.GetDirectoryName(trimmed) ?? string.Empty;
+            var filename = PathExtensions.GetFileName(trimmed);
+            var filepath = PathExtensions.GetDirectoryName(trimmed) ?? string.Empty;
             // Sven coop automatically infers the existence of p_, v_, w_ variants of models, so we have to add them all in case the user only included one of them.
             if (filename.StartsWith("p_") || filename.StartsWith("v_") || filename.StartsWith("w_")) {
-                var playermodel = Path.Combine(filepath, "p"+filename[1..]);
-                var viewmodel = Path.Combine(filepath, "v"+filename[1..]);
-                var worldmodel = Path.Combine(filepath, "w"+filename[1..]);
+                var playermodel = PathExtensions.Combine(filepath, "p"+filename[1..]);
+                var viewmodel = PathExtensions.Combine(filepath, "v"+filename[1..]);
+                var worldmodel = PathExtensions.Combine(filepath, "w"+filename[1..]);
                 TryAdd(playermodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
                 TryAdd(viewmodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
                 TryAdd(worldmodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
@@ -120,12 +120,12 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (!TryPathToModelPath(path, out var modelPath)) {
             return;
         }
-        var filename = Path.GetFileName(modelPath);
-        var filepath = Path.GetDirectoryName(modelPath) ?? string.Empty;
+        var filename = PathExtensions.GetFileName(modelPath);
+        var filepath = PathExtensions.GetDirectoryName(modelPath) ?? string.Empty;
         if (filename.StartsWith("p_") || filename.StartsWith("v_") || filename.StartsWith("w_")) {
-            var playermodel = Path.Combine(filepath, "p" + filename[1..]);
-            var viewmodel = Path.Combine(filepath, "v" + filename[1..]);
-            var worldmodel = Path.Combine(filepath, "w" + filename[1..]);
+            var playermodel = PathExtensions.Combine(filepath, "p" + filename[1..]);
+            var viewmodel = PathExtensions.Combine(filepath, "v" + filename[1..]);
+            var worldmodel = PathExtensions.Combine(filepath, "w" + filename[1..]);
             TryAdd(playermodel.Trim(), new BSPResource(playermodel.Trim(), new BSPResourceInferred($"inferred from: {source}")));
             TryAdd(viewmodel.Trim(), new BSPResource(viewmodel.Trim(), new BSPResourceInferred($"inferred from {source}")));
             TryAdd(worldmodel.Trim(), new BSPResource(worldmodel.Trim(), new BSPResourceInferred($"inferred from {source}")));
@@ -141,13 +141,13 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     private string? FindFileWithoutExtension(string path) {
-        var folder = Path.GetDirectoryName(path);
+        var folder = PathExtensions.GetDirectoryName(path);
         if (folder == null) return null;
         if (!Directory.Exists(folder)) {
             return null;
         }
         foreach (var file in Directory.GetFiles(folder)) {
-            if (Path.GetFileNameWithoutExtension(file) == Path.GetFileNameWithoutExtension(path)) {
+            if (PathExtensions.GetFileNameWithoutExtension(file) == PathExtensions.GetFileNameWithoutExtension(path)) {
                 return file;
             }
         }
@@ -167,7 +167,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
             return;
         }
         
-        sentencePath = Path.Combine(bsp.GetAddonDirectory().FullName, sentencePath);
+        sentencePath = PathExtensions.Combine(bsp.GetAddonDirectory().FullName, sentencePath);
         if (!File.Exists(sentencePath)) {
             return;
         }
@@ -233,7 +233,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
     
     private void CheckSkyboxAndAdd(string path, IResourceSource source) {
-        if (File.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,path))) {
+        if (File.Exists(PathExtensions.Combine(bsp.GetAddonDirectory().FullName,path))) {
             TryAdd(path.Trim(), new BSPResource(path.Trim(), source));
         }
     }
@@ -254,12 +254,12 @@ public class BSPResources : Dictionary<string,BSPResource> {
     }
 
     private bool TryGetInvalidFolderCasing(string filePath, [NotNullWhen(true)] out string? invalidFolderName, [NotNullWhen(true)] out DirectoryInfo? workingDir) {
-        var dir = Path.GetDirectoryName(filePath);
-        while (!string.IsNullOrEmpty(dir) && !Directory.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,dir))) {
-            var dirName = Path.GetFileName(dir);
-            dir = Path.GetDirectoryName(dir);
-            if (!string.IsNullOrEmpty(dir) && Directory.Exists(Path.Combine(bsp.GetAddonDirectory().FullName,dir))) {
-                workingDir = new DirectoryInfo(Path.Combine(bsp.GetAddonDirectory().FullName,dir));
+        var dir = PathExtensions.GetDirectoryName(filePath);
+        while (!string.IsNullOrEmpty(dir) && !Directory.Exists(PathExtensions.Combine(bsp.GetAddonDirectory().FullName,dir))) {
+            var dirName = PathExtensions.GetFileName(dir);
+            dir = PathExtensions.GetDirectoryName(dir);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(PathExtensions.Combine(bsp.GetAddonDirectory().FullName,dir))) {
+                workingDir = new DirectoryInfo(PathExtensions.Combine(bsp.GetAddonDirectory().FullName,dir));
                 invalidFolderName = dirName;
                 return true;
             }
@@ -312,7 +312,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
         
         List<string> paths = new List<string>();
         foreach (var key in Keys) {
-            paths.Add(Path.Combine(addonDirectory.FullName, key));
+            paths.Add(PathExtensions.Combine(addonDirectory.FullName, key));
         }
         CaseSensitivityTools.FixMalformedCasing(paths);
     }

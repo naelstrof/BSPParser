@@ -119,8 +119,8 @@ public class BSP {
 
     private bool TryMatchEntityToWeaponSpriteText(string weaponName, HashSet<string> files, out string weaponSpriteTextPath) {
         foreach (var file in files) {
-            var filename = Path.GetFileNameWithoutExtension(file);
-            var fileExtension = Path.GetExtension(file);
+            var filename = PathExtensions.GetFileNameWithoutExtension(file);
+            var fileExtension = PathExtensions.GetExtension(file);
             if (!file.StartsWith("sprites")) {
                 continue;
             }
@@ -141,7 +141,7 @@ public class BSP {
             weaponSpriteTextPath += ".txt";
         }
 
-        var realPath = Path.Combine(addonDirectory.FullName, weaponSpriteTextPath);
+        var realPath = PathExtensions.Combine(addonDirectory.FullName, weaponSpriteTextPath);
         if (!File.Exists(realPath)) {
             Console.Error.WriteLine($"\tCouldn't find weapon sprite text file {weaponSpriteTextPath} case-sensitivity issue?...");
             return;
@@ -218,7 +218,7 @@ public class BSP {
         foreach (var envSprite in GetEntities().Where((ent) => ent.ContainsKey("classname") && ent["classname"] == "env_sprite" && ent.ContainsKey("model"))) {
             var model = envSprite["model"];
             if (resources.TryPathToModelPath(model, out var modelPath)) {
-                resources.AddModel(model, new BSPResourceEntitySource(envSprite));
+                resources.AddModel(modelPath, new BSPResourceEntitySource(envSprite));
             }
             if (resources.TryPathToSpritePath(model, out var spritePath)) {
                 resources.AddSprite(spritePath, new BSPResourceEntitySource(envSprite));
@@ -301,11 +301,19 @@ public class BSP {
             ParseSoundReplacementFile(resources, new BSPResourceEntitySource(soundListEntity), soundListEntity["soundlist"]);
         }
 
-        // We automatically detect if we're scanning an individual addon or not, and include wads by assumption if we are.
-        if (addonDirectory.Name != "svencoop_addon" && addonDirectory.Name != "svencoop" && addonDirectory.Name != "svencoop_downloads") {
-            foreach (var file in addonDirectory.GetFiles()) {
-                if (file.FullName.EndsWith(".wad")) {
-                    resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceArbitrary("by assumption")));
+        foreach (var worldspawn in GetEntities().Where((ent) => ent.TryGetValue("classname", out var classname) && classname == "worldspawn" && ent.ContainsKey("wad"))) {
+            foreach (var wad in worldspawn["wad"].Split(";")) {
+                if (string.IsNullOrEmpty(wad)) {
+                    continue;
+                }
+                var wadName = PathExtensions.GetFileName(wad);
+                if (!wadName.ToLowerInvariant().EndsWith(".wad")) {
+                    wadName += ".wad";
+                }
+                foreach (var file in addonDirectory.GetFiles()) {
+                    if (file.Name.Equals(wadName, StringComparison.InvariantCultureIgnoreCase)) {
+                        resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceEntitySource(worldspawn)));
+                    }
                 }
             }
         }
@@ -325,7 +333,7 @@ public class BSP {
             }
 
             if (config.TryGetValue("map_script", out var mapScriptFolder)) {
-                var workingDirectory = Path.Combine(addonDirectory.FullName, "scripts", "maps");
+                var workingDirectory = PathExtensions.Combine(addonDirectory.FullName, "scripts", "maps");
                 ParseAngelScript(resources, mapScriptFolder, new DirectoryInfo(workingDirectory));
             }
 
@@ -349,7 +357,7 @@ public class BSP {
         if (!scriptPath.EndsWith(".as")) {
             scriptPath += ".as";
         }
-        var path = Path.Combine(workingDir.FullName, scriptPath);
+        var path = PathExtensions.Combine(workingDir.FullName, scriptPath);
         if (!visited.Add(path)) return;
         FileInfo file = new FileInfo(path);
         if (!workingDir.Exists || !file.Exists) {
@@ -367,17 +375,17 @@ public class BSP {
         foreach (var str in strings) {
             var testString = str.TrimStart('/');
             if (resources.TryPathToSoundPath(testString, out var soundPath)) {
-                if (File.Exists(Path.Combine(addonDirectory.FullName, soundPath))) {
+                if (File.Exists(PathExtensions.Combine(addonDirectory.FullName, soundPath))) {
                     resources.AddSound(testString, new BSPResourceFileSource($"AngelScript: {scriptPath}"));
                 }
             }
             if (resources.TryPathToModelPath(testString, out var modelPath)) {
-                if (File.Exists(Path.Combine(addonDirectory.FullName, modelPath))) {
+                if (File.Exists(PathExtensions.Combine(addonDirectory.FullName, modelPath))) {
                     resources.AddModel(modelPath, new BSPResourceFileSource($"AngelScript: {scriptPath}"));
                 }
             }
             if (resources.TryPathToSpritePath(testString, out var spritePath)) {
-                if (File.Exists(Path.Combine(addonDirectory.FullName, spritePath))) {
+                if (File.Exists(PathExtensions.Combine(addonDirectory.FullName, spritePath))) {
                     resources.AddSprite(spritePath, new BSPResourceFileSource($"AngelScript: {scriptPath}"));
                 }
             }
@@ -386,9 +394,9 @@ public class BSP {
     }
 
     private void ParseSoundReplacementFile(BSPResources resources, IResourceSource source, string value) {
-        var mapName = Path.GetFileName(filepath);
-        var startPath = Path.Combine(addonDirectory.FullName, "sound", mapName.Substring(0, mapName.Length-4));
-        var providedPath = Path.Combine(startPath, value);
+        var mapName = PathExtensions.GetFileName(filepath);
+        var startPath = PathExtensions.Combine(addonDirectory.FullName, "sound", mapName.Substring(0, mapName.Length-4));
+        var providedPath = PathExtensions.Combine(startPath, value);
         var uri1 = new Uri(providedPath);
         var uri2 = new Uri(addonDirectory.FullName);
         var relativePath = uri2.MakeRelativeUri(uri1).ToString();
@@ -399,15 +407,15 @@ public class BSP {
         if (!File.Exists(providedPath)) {
             return;
         }
-        foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
+        foreach (var pair in new BSPTokenizer(File.ReadAllText(PathExtensions.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
             resources.AddSound(pair.Value, new BSPResourceFileSource(value));
         }
     }
     
     private void ParseModelReplacementFile(BSPResources resources, IResourceSource source, string value) {
-        var mapName = Path.GetFileName(filepath);
-        var startPath = Path.Combine(addonDirectory.FullName, "models", mapName.Substring(0, mapName.Length-4));
-        var providedPath = Path.Combine(startPath, value);
+        var mapName = PathExtensions.GetFileName(filepath);
+        var startPath = PathExtensions.Combine(addonDirectory.FullName, "models", mapName.Substring(0, mapName.Length-4));
+        var providedPath = PathExtensions.Combine(startPath, value);
         var uri1 = new Uri(providedPath);
         var uri2 = new Uri(addonDirectory.FullName);
         var relativePath = uri2.MakeRelativeUri(uri1).ToString();
@@ -418,7 +426,7 @@ public class BSP {
         if (!File.Exists(providedPath)) {
             return;
         }
-        foreach (var pair in new BSPTokenizer(File.ReadAllText(Path.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
+        foreach (var pair in new BSPTokenizer(File.ReadAllText(PathExtensions.Combine(addonDirectory.FullName, providedPath))).GetKeyValues()) {
             if (pair.Value.StartsWith("*")) {
                 continue;
             }
@@ -447,7 +455,7 @@ public class BSP {
         generated_resources.FixMalformedResources(GetAddonDirectory());
 
         foreach (var missingResource in generated_resources.Where((a) =>
-                     !File.Exists(Path.Combine(GetAddonDirectory().FullName, a.Key)))) {
+                     !File.Exists(PathExtensions.Combine(GetAddonDirectory().FullName, a.Key)))) {
             if (!missingResource.Value.source.GetInferred()) {
                 Console.WriteLine($"\tRemoving due to missing from disk: {missingResource.Value}");
             }
@@ -456,7 +464,7 @@ public class BSP {
 
         foreach (var resource in generated_resources.Where((a) =>
                      !original_resources.ContainsKey(a.Key) &&
-                     File.Exists(Path.Combine(GetAddonDirectory().FullName, a.Key)))) {
+                     File.Exists(PathExtensions.Combine(GetAddonDirectory().FullName, a.Key)))) {
             Console.WriteLine($"\tAdding: {resource.Value}");
         }
 
