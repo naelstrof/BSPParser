@@ -143,7 +143,7 @@ public class BSP {
 
         var realPath = Path.Combine(addonDirectory.FullName, weaponSpriteTextPath);
         if (!File.Exists(realPath)) {
-            Console.Error.WriteLine($"Couldn't find weapon sprite text file {realPath} case-sensitivity issue?...");
+            Console.Error.WriteLine($"\tCouldn't find weapon sprite text file {weaponSpriteTextPath} case-sensitivity issue?...");
             return;
         }
         
