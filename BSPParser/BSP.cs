@@ -326,7 +326,7 @@ public class BSP {
 
             if (config.TryGetValue("map_script", out var mapScriptFolder)) {
                 var workingDirectory = Path.Combine(addonDirectory.FullName, "scripts", "maps");
-                ParseAngelScript(resources, mapScriptFolder, new DirectoryInfo(workingDirectory),0);
+                ParseAngelScript(resources, mapScriptFolder, new DirectoryInfo(workingDirectory));
             }
 
             if (config.TryGetValue("sentence_file", out var sentenceFilePath)) {
@@ -338,15 +338,19 @@ public class BSP {
         return resources;
     }
 
-    private void ParseAngelScript(BSPResources resources, string scriptPath, DirectoryInfo workingDir, int depth) {
-        if (depth > 64) {
-            Console.Error.WriteLine($"Found a 64 deep include chain with script {scriptPath}, giving up, cyclical dependency?");
+    private void ParseAngelScript(BSPResources resources, string scriptPath, DirectoryInfo workingDir, int depth = 0, HashSet<string>? visited = null) {
+        if (visited == null) {
+            visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+        if (depth > 32) {
+            Console.Error.WriteLine($"Found a 32 deep include chain with script {scriptPath}, giving up, cyclical dependency?");
             return;
         }
         if (!scriptPath.EndsWith(".as")) {
             scriptPath += ".as";
         }
         var path = Path.Combine(workingDir.FullName, scriptPath);
+        if (!visited.Add(path)) return;
         FileInfo file = new FileInfo(path);
         if (!workingDir.Exists || !file.Exists) {
             Console.Error.WriteLine($"Couldn't find angel script {file.FullName} case-sensitivity issue or default asset?...skipping");
@@ -356,7 +360,7 @@ public class BSP {
         var includes = new HashSet<string>(tokenizer.GetAllIncludes());
         foreach (var include in includes) {
             if (file.Directory != null) {
-                ParseAngelScript(resources, include, file.Directory, depth+1);
+                ParseAngelScript(resources, include, file.Directory, depth+1, visited);
             }
         }
         var strings = new HashSet<string>(tokenizer.GetAllStrings());
