@@ -3,7 +3,7 @@ using System.Text;
 
 namespace BSPParser;
 
-public class BSPResources : Dictionary<string,BSPResource> {
+public class BSPResources : Dictionary<string,IResourceSource> {
     private BSP bsp;
     public BSPResources(BSP bsp) {
         this.bsp = bsp;
@@ -23,11 +23,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
                 var playermodel = PathExtensions.Combine(filepath, "p"+filename[1..]);
                 var viewmodel = PathExtensions.Combine(filepath, "v"+filename[1..]);
                 var worldmodel = PathExtensions.Combine(filepath, "w"+filename[1..]);
-                TryAdd(playermodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
-                TryAdd(viewmodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
-                TryAdd(worldmodel.Trim(), new BSPResource(line.Trim(), new BSPResourceInferred(resourcesFilePath)));
+                TryAdd(playermodel.Trim(), new BSPResourceInferred(resourcesFilePath));
+                TryAdd(viewmodel.Trim(), new BSPResourceInferred(resourcesFilePath));
+                TryAdd(worldmodel.Trim(), new BSPResourceInferred(resourcesFilePath));
             } else {
-                TryAdd(line.Trim(), new BSPResource(line.Trim(), filesource));
+                TryAdd(line.Trim(), filesource);
             }
         }
         Clean();
@@ -111,10 +111,12 @@ public class BSPResources : Dictionary<string,BSPResource> {
         return true;
     }
 
-    // For debug on output
-    //public new void TryAdd(string key, BSPResource value) {
-        //((Dictionary<string,BSPResource>)this).TryAdd(key, value);
-    //}
+    public new void TryAdd(string key, IResourceSource value) {
+        if (Keys.Any(otherKey => key.Equals(otherKey, StringComparison.InvariantCultureIgnoreCase))) {
+            return;
+        }
+        ((Dictionary<string,IResourceSource>)this).TryAdd(key, value);
+    }
 
     public void AddModel(string path, IResourceSource source) {
         if (!TryPathToModelPath(path, out var modelPath)) {
@@ -126,11 +128,11 @@ public class BSPResources : Dictionary<string,BSPResource> {
             var playermodel = PathExtensions.Combine(filepath, "p" + filename[1..]);
             var viewmodel = PathExtensions.Combine(filepath, "v" + filename[1..]);
             var worldmodel = PathExtensions.Combine(filepath, "w" + filename[1..]);
-            TryAdd(playermodel.Trim(), new BSPResource(playermodel.Trim(), new BSPResourceInferred($"inferred from: {source}")));
-            TryAdd(viewmodel.Trim(), new BSPResource(viewmodel.Trim(), new BSPResourceInferred($"inferred from {source}")));
-            TryAdd(worldmodel.Trim(), new BSPResource(worldmodel.Trim(), new BSPResourceInferred($"inferred from {source}")));
+            TryAdd(playermodel.Trim(), new BSPResourceInferred($"inferred from: {source}"));
+            TryAdd(viewmodel.Trim(), new BSPResourceInferred($"inferred from {source}"));
+            TryAdd(worldmodel.Trim(), new BSPResourceInferred($"inferred from {source}"));
         } else {
-            TryAdd(modelPath.Trim(), new BSPResource(modelPath.Trim(), source));
+            TryAdd(modelPath.Trim(), source);
         }
     }
     
@@ -187,7 +189,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (!TryPathToSoundPath(soundPath, out var sound)) {
             return;
         }
-        TryAdd(sound, new BSPResource(sound, source));
+        TryAdd(sound, source);
     }
 
     public void AddSoundFromEntityAndKey(string classname, string key) {
@@ -223,7 +225,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
         if (!path.StartsWith("sprites/")) {
             path = "sprites/" + path;
         }
-        TryAdd(path.Trim(), new BSPResource(path.Trim(), source));
+        TryAdd(path.Trim(), source);
     }
     
     public void AddSpriteFromEntityAndKey(string classname, string key) {
@@ -234,7 +236,7 @@ public class BSPResources : Dictionary<string,BSPResource> {
     
     private void CheckSkyboxAndAdd(string path, IResourceSource source) {
         if (File.Exists(PathExtensions.Combine(bsp.GetAddonDirectory().FullName,path))) {
-            TryAdd(path.Trim(), new BSPResource(path.Trim(), source));
+            TryAdd(path.Trim(), source);
         }
     }
 

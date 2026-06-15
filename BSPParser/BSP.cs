@@ -32,7 +32,7 @@ public class BSP {
     
     private static bool TryReadStruct<T>(Stream stream, out T? output) {
         byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
-        var read = stream.Read(buffer, 0, Marshal.SizeOf(typeof(T)));
+        _ = stream.Read(buffer, 0, Marshal.SizeOf(typeof(T)));
         GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
         T? typedStruct = (T?)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T));
         if (typedStruct == null) {
@@ -47,7 +47,7 @@ public class BSP {
     private static bool TryReadStruct<T>(Stream stream, long offset, out T? output) {
         byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
         stream.Seek(offset, SeekOrigin.Begin);
-        var read = stream.Read(buffer, 0, Marshal.SizeOf(typeof(T)));
+        _ = stream.Read(buffer, 0, Marshal.SizeOf(typeof(T)));
         GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
         T? typedStruct = (T?)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T));
         if (typedStruct == null) {
@@ -63,8 +63,8 @@ public class BSP {
     private static string ReadString(Stream stream, int offset, int size) {
         byte[] buffer = new byte[size];
         stream.Seek(offset, SeekOrigin.Begin);
-        var read = stream.Read(buffer, 0, size);
-        return System.Text.Encoding.UTF8.GetString(buffer);
+        _ = stream.Read(buffer, 0, size);
+        return Encoding.UTF8.GetString(buffer);
     }
 
     private void ParseEntities(FileStream stream, BSPHeader header) {
@@ -147,7 +147,7 @@ public class BSP {
             return;
         }
         
-        resources.TryAdd(weaponSpriteTextPath, new BSPResource(weaponSpriteTextPath, source));
+        resources.TryAdd(weaponSpriteTextPath, source);
         var weaponHudTokenizer = new WeaponHudTokenizer(File.ReadAllText(realPath));
         foreach (var sprite in weaponHudTokenizer.GetAllSprites()) {
             resources.AddSprite(sprite, new BSPResourceFileSource($"from {source}, found {weaponSpriteTextPath}"));
@@ -312,7 +312,7 @@ public class BSP {
                 }
                 foreach (var file in addonDirectory.GetFiles()) {
                     if (file.Name.Equals(wadName, StringComparison.InvariantCultureIgnoreCase)) {
-                        resources.TryAdd(file.Name, new BSPResource(file.Name, new BSPResourceEntitySource(worldspawn)));
+                        resources.TryAdd(file.Name, new BSPResourceEntitySource(worldspawn));
                     }
                 }
             }
@@ -403,7 +403,7 @@ public class BSP {
         if (relativePath.StartsWith(addonDirectory.Name)) {
             relativePath = relativePath.Substring(addonDirectory.Name.Length+1);
         }
-        resources.TryAdd(relativePath, new BSPResource(relativePath, source));
+        resources.TryAdd(relativePath, source);
         if (!File.Exists(providedPath)) {
             return;
         }
@@ -422,7 +422,7 @@ public class BSP {
         if (relativePath.StartsWith(addonDirectory.Name)) {
             relativePath = relativePath.Substring(addonDirectory.Name.Length+1);
         }
-        resources.TryAdd(relativePath, new BSPResource(relativePath, source));
+        resources.TryAdd(relativePath, source);
         if (!File.Exists(providedPath)) {
             return;
         }
@@ -456,8 +456,8 @@ public class BSP {
 
         foreach (var missingResource in generated_resources.Where((a) =>
                      !File.Exists(PathExtensions.Combine(GetAddonDirectory().FullName, a.Key)))) {
-            if (!missingResource.Value.source.GetInferred()) {
-                Console.WriteLine($"\tRemoving due to missing from disk: {missingResource.Value}");
+            if (!missingResource.Value.GetInferred()) {
+                Console.WriteLine($"\tRemoving due to missing from disk: {missingResource}");
             }
             generated_resources.Remove(missingResource.Key);
         }
@@ -465,7 +465,7 @@ public class BSP {
         foreach (var resource in generated_resources.Where((a) =>
                      !original_resources.ContainsKey(a.Key) &&
                      File.Exists(PathExtensions.Combine(GetAddonDirectory().FullName, a.Key)))) {
-            Console.WriteLine($"\tAdding: {resource.Value}");
+            Console.WriteLine($"\tAdding: {resource}");
         }
 
         generated_resources.Save(GetResourceFilePath());
